@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Allenatore Personale PWA</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-brand">
+            <span class="brand-icon">⚡</span>
+            <div>
+                <h1 class="brand-title">Allenatore PWA</h1>
+                <span class="brand-sub">Smart Workout Tracker</span>
+            </div>
+        </div>
+        <div class="segmented-control">
+            <button id="btnGym" class="segment-btn active" type="button">Palestra</button>
+            <button id="btnHome" class="segment-btn" type="button">Casa</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Banner Infortuni / Dolori Attivi (In primo piano in alto) -->
+        <section id="activeInjuriesBanner" class="active-injuries-banner" style="display: none;">
+            <div class="banner-header">
+                <h3>⚠️ Attenzione: Dolori / Infortuni in Corso</h3>
+            </div>
+            <div id="activeInjuriesList"></div>
+        </section>
+
+        <!-- Slot: Recent workouts badge -->
+        <section id="recentBadge" class="badge">
+            Allenamenti ultimi 30 giorni: <span id="recentCount">0</span>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SEZIONE 1: ALLENAMENTO DI OGGI (SCHEDA ATTUALE)          -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="todayWorkout" class="card">
+            <div class="workout-header-row">
+                <div>
+                    <h2 style="margin-bottom: 0.2rem;">Allenamento di Oggi</h2>
+                    <div id="planInfoSubtext" class="plan-subtext">Caricamento scheda in corso...</div>
+                </div>
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                    <button type="button" id="openStatsModalBtn" class="primary" style="font-size:0.85rem; padding: 0.4rem 0.7rem; background:#00c853;">
+                        📈 Grafici & Progressi
+                    </button>
+                    <button type="button" id="openPdfExportModalBtn" class="secondary" style="font-size:0.85rem; padding: 0.4rem 0.6rem;">
+                        📄 Scarica PDF
+                    </button>
+                    <button type="button" id="goToNewPlanBtn" class="secondary" style="font-size:0.85rem; padding: 0.4rem 0.6rem;">
+                        ➕ Nuova Scheda
+                    </button>
+                </div>
+            </div>
+
+        <!-- Selettore Giorni Scheda (Giorno 1, Giorno 2, Giorno 3...) -->
+        <div id="daySelectorContainer" class="day-selector-bar" style="display: none;"></div>
+
+        <!-- Sezione Accordion Giorni Allenamento (Chiusi di default) -->
+        <div id="workoutDaysAccordionContainer"></div>
+
+        <!-- Lista Esercizi del Giorno Selezionato (Fallback / Contenitore attivo) -->
+        <div id="exerciseList" class="workout-exercise-container" style="display: none;"></div>
+
+            <!-- Slot Scheda Completata -->
+            <div id="workoutCompletionSlot" class="workout-complete-slot" style="display: none;">
+                <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 0.6rem;">
+                    Concludi la sessione odierna. Gli esercizi per cui non hai premuto "OK" o con ripetute a 0 verranno salvati come non effettuati / saltati.
+                </p>
+                <button type="button" id="finishWorkoutBtn" class="primary btn-large-workout">
+                    🏆 Scheda Completata
+                </button>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SEZIONE 1B: ULTIME SCHEDE SVOLTE (SOLUZIONE 1 ACCORDION)  -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="recentSessionsSection" class="card">
+            <div class="accordion-section" style="border: none; background: transparent;">
+                <button type="button" id="toggleRecentSessionsBtn" class="accordion-toggle-btn" style="background:#2c2c2c; border-radius:6px; padding:0.9rem 1rem;">
+                    <span>📋 Ultime Schede Svolte (<span id="recentSessionsCountBadge">0</span>)</span>
+                    <span id="recentSessionsArrow" class="accordion-arrow">▼ Mostra Ultime Schede</span>
+                </button>
+                <div id="recentSessionsContent" class="accordion-content" style="display: none; background: #1c1c1c; border-radius: 6px; margin-top: 0.6rem; padding: 0.8rem;">
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.8rem;">
+                        Visualizza le ultime sedute concluse. Clicca su ciascuna seduta per espandere il dettaglio degli esercizi svolti, carichi e note.
+                    </p>
+                    <div id="recentSessionsList"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SEZIONE 2: INSERISCI NUOVA SCHEDA (SEZIONE DEDICATA)     -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="newPlanSection" class="card">
+            <div class="accordion-section" style="border: none; background: transparent;">
+                <button type="button" id="toggleNewPlanAccordionBtn" class="accordion-toggle-btn" style="background:#2c2c2c; border-radius:6px; padding:0.9rem 1rem;">
+                    <span>📝 Inserisci Nuova Scheda (<span id="newPlanEnvLabel">Palestra</span>)</span>
+                    <span id="newPlanArrow" class="accordion-arrow">▼ Apri Creazione</span>
+                </button>
+                <div id="newPlanContent" class="accordion-content" style="display: none; background: #222; border-radius: 6px; margin-top: 0.6rem; padding: 1rem;">
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 1rem;">
+                        Configura la scheda attiva per l'ambiente corrente. La precedente scheda attiva verrà automaticamente archiviata nello storico.
+                    </p>
+
+                    <label for="newPlanName" style="font-size:0.85rem; color:#aaa;">Nome Scheda:</label>
+                    <input type="text" id="newPlanName" placeholder="Es. Scheda Ipertrofia Autunno, Full Body Casa..." required />
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.6rem 0;">
+                        <div>
+                            <label for="newPlanStartDate" style="font-size:0.85rem; color:#aaa;">Data Inizio / Validità:</label>
+                            <input type="date" id="newPlanStartDate" required />
+                        </div>
+                        <div>
+                            <label for="newPlanNumDays" style="font-size:0.85rem; color:#aaa;">Numero Giorni (Split):</label>
+                            <select id="newPlanNumDays" style="margin-top:0.3rem;">
+                                <option value="1">1 Giorno (Singola sessione)</option>
+                                <option value="2">2 Giorni (A / B)</option>
+                                <option value="3" selected>3 Giorni (A / B / C)</option>
+                                <option value="4">4 Giorni (A / B / C / D)</option>
+                                <option value="5">5 Giorni</option>
+                                <option value="6">6 Giorni</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Builder per ciascun giorno -->
+                    <div id="daysBuilderContainer"></div>
+
+                    <button type="button" id="saveCompletePlanBtn" class="primary btn-large-workout" style="margin-top: 1.2rem;">
+                        💾 Salva e Attiva Nuova Scheda
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SEZIONE 3: ESTRAZIONE SCHEDA IN PDF (ATTUALE O STORICA)  -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="pdfExportSection" class="card">
+            <div class="accordion-section" style="border: none; background: transparent;">
+                <button type="button" id="togglePdfAccordionBtn" class="accordion-toggle-btn" style="background:#2c2c2c; border-radius:6px; padding:0.9rem 1rem;">
+                    <span>📄 Stampa / Esporta Scheda in PDF</span>
+                    <span id="pdfAccordionArrow" class="accordion-arrow">▼ Apri Opzioni</span>
+                </button>
+                <div id="pdfContent" class="accordion-content" style="display: none; background: #222; border-radius: 6px; margin-top: 0.6rem; padding: 1rem;">
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.8rem;">
+                        Estrai in PDF la scheda in uso ad una determinata data. Puoi inserire la data di oggi per la scheda corrente, oppure una data passata (es. nel 2025 o anni precedenti) per stampare la scheda storica che stavi seguendo in quel momento.
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.8rem;">
+                        <div>
+                            <label for="pdfTargetDate" style="font-size:0.85rem; color:#aaa;">Data di riferimento:</label>
+                            <input type="date" id="pdfTargetDate" required />
+                        </div>
+                        <div>
+                            <label for="pdfTargetEnv" style="font-size:0.85rem; color:#aaa;">Ambiente:</label>
+                            <select id="pdfTargetEnv" style="margin-top:0.3rem;">
+                                <option value="gym" selected>Palestra</option>
+                                <option value="home">Casa</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="button" id="generatePdfBtn" class="primary btn-large-workout" style="margin-top: 0.5rem; background: #2196f3;">
+                        📥 Genera e Scarica PDF Scheda
+                    </button>
+                    <div id="pdfStatusMsg" style="font-size: 0.85rem; color: #ffb74d; margin-top: 0.5rem; text-align: center;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Datalist globale per suggerimento esercizi esistenti nel builder -->
+        <datalist id="exerciseSuggestionsGlobal"></datalist>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SEZIONE 4: ATTIVITÀ EXTRA                                 -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="extraActivity" class="card">
+            <h2 id="extraFormTitle">Attività Extra</h2>
+            <form id="extraForm">
+                <input type="hidden" id="extraId" />
+                
+                <label for="extraDate" style="font-size:0.85rem; color:#aaa;">Data Attività:</label>
+                <input type="date" id="extraDate" required />
+                
+                <label for="extraSport" style="font-size:0.85rem; color:#aaa;">Tipo sport (con suggerimenti dalla tua memoria):</label>
+                <input type="text" id="extraSport" list="sportSuggestions" placeholder="Es. Tennis, Calcetto, Corsa, Padel..." required autocomplete="off" />
+                <datalist id="sportSuggestions"></datalist>
+
+                <label for="extraDuration" style="font-size:0.85rem; color:#aaa;">Durata (minuti):</label>
+                <input type="number" id="extraDuration" placeholder="Durata in minuti" min="1" required />
+
+                <label for="extraRPE" style="font-size:0.85rem; color:#aaa;">RPE - Intensità sforzo fisico (da 1 a 10):</label>
+                <input type="number" id="extraRPE" placeholder="RPE - Intensità sforzo fisico (1-10)" min="1" max="10" required />
+
+                <label for="extraNotes" style="font-size:0.85rem; color:#aaa;">Note (opzionale):</label>
+                <input type="text" id="extraNotes" placeholder="Note" />
+                
+                <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                    <button type="submit" id="extraSubmitBtn" class="primary" style="flex:1;">Salva</button>
+                    <button type="button" id="extraCancelEditBtn" class="secondary" style="display:none; flex:1;">Annulla Modifica</button>
+                </div>
+            </form>
+
+            <div class="accordion-section" style="margin-top: 1rem;">
+                <button type="button" id="toggleExtraBtn" class="accordion-toggle-btn">
+                    <span>📋 Ultimi inserimenti attività extra (<span id="extraCountBadge">0</span>)</span>
+                    <span id="extraArrow" class="accordion-arrow">▼ Mostra ultimi 10</span>
+                </button>
+                <div id="extraContainer" class="accordion-content" style="display: none;">
+                    <ul id="extraList"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SEZIONE 5: GESTIONE INFORTUNI / DOLORI                    -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="injuries" class="card">
+            <h2 id="injuryFormTitle">Registra Infortunio / Dolore</h2>
+            <form id="injuryForm">
+                <input type="hidden" id="injuryId" />
+                <label for="injuryStart" style="font-size:0.85rem; color:#aaa;">Data Inizio:</label>
+                <input type="date" id="injuryStart" required />
+                
+                <label for="injuryType" style="font-size:0.85rem; color:#aaa;">Tipo dolore o infortunio (con suggerimenti dalla memoria):</label>
+                <input type="text" id="injuryType" list="injurySuggestions" placeholder="Es. Spalla destra, Ginocchio sinistro..." required autocomplete="off" />
+                <datalist id="injurySuggestions"></datalist>
+
+                <label for="injuryEnd" style="font-size:0.85rem; color:#aaa;">Data Fine (lascia vuoto se il dolore è ancora in corso):</label>
+                <input type="date" id="injuryEnd" />
+                <input type="text" id="injuryNotes" placeholder="Note (trattamento, esercizi da evitare...)" />
+                <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                    <button type="submit" id="injurySubmitBtn" class="primary" style="flex:1;">Salva</button>
+                    <button type="button" id="injuryCancelEditBtn" class="secondary" style="display:none; flex:1;">Annulla Modifica</button>
+                </div>
+            </form>
+
+            <h3 style="margin-top:1.5rem; font-size:1.1rem; border-top: 1px solid #333; padding-top:1rem;">Storico Infortuni</h3>
+            
+            <div class="accordion-section" style="margin-top: 0.8rem;">
+                <button type="button" id="toggleOngoingBtn" class="accordion-toggle-btn">
+                    <span>⚡ Infortuni in corso (<span id="ongoingCount">0</span>)</span>
+                    <span id="ongoingArrow" class="accordion-arrow">▼ Mostra</span>
+                </button>
+                <div id="ongoingContainer" class="accordion-content" style="display: none;">
+                    <ul id="ongoingList"></ul>
+                </div>
+            </div>
+
+            <div class="accordion-section" style="margin-top: 0.8rem;">
+                <button type="button" id="toggleResolvedBtn" class="accordion-toggle-btn">
+                    <span>✓ Infortuni conclusi (<span id="resolvedCount">0</span>)</span>
+                    <span id="resolvedArrow" class="accordion-arrow">▼ Mostra</span>
+                </button>
+                <div id="resolvedContainer" class="accordion-content" style="display: none;">
+                    <ul id="resolvedList"></ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- FINESTRA MODALE: GRAFICI & PROGRESSI STATISTICHE          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div id="statsModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog">
+            <!-- Header Modale -->
+            <div class="modal-header">
+                <h3>📊 Statistiche & Progressi</h3>
+                <button type="button" id="closeStatsModalBtn" class="modal-close-btn" title="Chiudi">✕</button>
+            </div>
+
+            <!-- Tabs di navigazione -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" data-tab="tabProgression">📈 Progressione Forza</button>
+                <button type="button" class="modal-tab-btn" data-tab="tabFrequency">📅 Frequenza & Consistenza</button>
+                <button type="button" class="modal-tab-btn" data-tab="tabMuscles">🥧 Gruppi Muscolari</button>
+            </div>
+
+            <!-- Corpo Modale -->
+            <div class="modal-body">
+                <!-- SOTTOPAGINA 1: PROGRESSIONE FORZA -->
+                <div id="tabProgression" class="modal-tab-panel active">
+                    <div class="chart-controls-grid">
+                        <div>
+                            <label for="chartExerciseSelect">Esercizio:</label>
+                            <select id="chartExerciseSelect"></select>
+                        </div>
+                        <div>
+                            <label for="chartEnvFilter">Ambiente:</label>
+                            <select id="chartEnvFilter">
+                                <option value="all" selected>Tutti (Palestra + Casa)</option>
+                                <option value="gym">Solo Palestra</option>
+                                <option value="home">Solo Casa</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="chartTimeRange">Periodo:</label>
+                            <select id="chartTimeRange">
+                                <option value="all" selected>Tutto lo Storico</option>
+                                <option value="3m">Ultimi 3 Mesi</option>
+                                <option value="6m">Ultimi 6 Mesi</option>
+                                <option value="1y">Ultimo Anno</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="chart-canvas-wrapper">
+                        <canvas id="progressionChartCanvas"></canvas>
+                    </div>
+
+                    <div id="progressionStatsSummary" class="chart-stats-summary"></div>
+                </div>
+
+                <!-- SOTTOPAGINA 2: FREQUENZA & ATTIVITÀ -->
+                <div id="tabFrequency" class="modal-tab-panel">
+                    <div class="chart-controls-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div>
+                            <label for="freqViewMode">Vista Temporale:</label>
+                            <select id="freqViewMode">
+                                <option value="monthly" selected>Presenze per Mese</option>
+                                <option value="weekly">Ultime 12 Settimane</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="freqActivityFilter">Attività:</label>
+                            <select id="freqActivityFilter">
+                                <option value="all" selected>Tutto (Pesi + Extra Cardio)</option>
+                                <option value="weights">Solo Pesi (Palestra/Casa)</option>
+                                <option value="extra">Solo Extra (Corsa, Padel, ecc.)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="chart-canvas-wrapper">
+                        <canvas id="frequencyChartCanvas"></canvas>
+                    </div>
+
+                    <div id="frequencyStatsSummary" class="chart-stats-summary"></div>
+                </div>
+
+                <!-- SOTTOPAGINA 3: GRUPPI MUSCOLARI -->
+                <div id="tabMuscles" class="modal-tab-panel">
+                    <div class="chart-controls-grid" style="grid-template-columns: 1fr;">
+                        <div>
+                            <label for="musclesTimeRange">Periodo di riferimento:</label>
+                            <select id="musclesTimeRange">
+                                <option value="all" selected>Tutto lo Storico</option>
+                                <option value="3m">Ultimi 3 Mesi</option>
+                                <option value="6m">Ultimi 6 Mesi</option>
+                                <option value="1y">Ultimo Anno</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="chart-canvas-wrapper" style="height: 300px;">
+                        <canvas id="musclesChartCanvas"></canvas>
+                    </div>
+
+                    <div id="musclesStatsSummary" class="chart-stats-summary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- FINESTRA MODALE: INTERAGISCI CON AI (COACH VIRTUALE)      -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div id="aiModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog ai-modal-dialog">
+            <!-- Header Modale AI -->
+            <div class="modal-header">
+                <h3>🤖 Coach Virtuale AI (Gemini)</h3>
+                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    <button type="button" id="aiApiKeySettingsBtn" class="ai-header-btn" title="Configura / Modifica API Key">⚙️ Chiave</button>
+                    <button type="button" id="aiClearChatBtn" class="ai-header-btn" title="Azzera conversazione">🗑️ Nuova Chat</button>
+                    <button type="button" id="closeAiModalBtn" class="modal-close-btn" title="Chiudi">✕</button>
+                </div>
+            </div>
+
+            <!-- SCHERMATA A: Configurazione / Inserimento API Key (Se non ancora salvata) -->
+            <div id="aiKeySetupView" class="modal-body" style="display: none; padding: 2rem 1.2rem; text-align: center;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.8rem;">🔑</div>
+                <h3 style="margin-bottom: 0.5rem; color: #fff;">Configura la tua API Key di Gemini</h3>
+                <p style="font-size: 0.9rem; color: #aaa; max-width: 480px; margin: 0 auto 1.5rem auto;">
+                    Per consentire all'assistente di analizzare i tuoi allenamenti, inserisci la tua API Key gratuita di Google Gemini. La chiave viene memorizzata esclusivamente nella memoria locale del tuo dispositivo.
+                </p>
+
+                <div style="max-width: 480px; margin: 0 auto; text-align: left;">
+                    <label for="aiApiKeyInput" style="font-size: 0.85rem; color: #ccc;">Incolla qui l'API Key:</label>
+                    <input type="password" id="aiApiKeyInput" placeholder="AIzaSy..." style="font-family: monospace; font-size: 1rem; padding: 0.7rem; margin-top: 0.3rem;" />
+                    
+                    <label for="aiModelSelect" style="font-size: 0.85rem; color: #ccc; margin-top: 0.8rem; display: block;">Modello Gemini:</label>
+                    <select id="aiModelSelect" style="margin-top: 0.3rem; padding: 0.6rem; font-size: 0.95rem;">
+                        <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Consigliato - Più veloce e intelligente)</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Standard stabile)</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Analisi profonda avanzata)</option>
+                    </select>
+
+                    <button type="button" id="saveApiKeyBtn" class="primary btn-large-workout" style="margin-top: 1.2rem; background: #9c27b0;">
+                        💾 Salva Impostazioni e Inizia
+                    </button>
+                    <button type="button" id="cancelApiKeyBtn" class="secondary" style="margin-top: 0.5rem; width: 100%; display: none;">
+                        Annulla
+                    </button>
+                </div>
+            </div>
+
+            <!-- SCHERMATA B: Interfaccia Chat AI Reale -->
+            <div id="aiChatView" class="ai-chat-container" style="display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden;">
+                <!-- Messaggi della chat -->
+                <div id="aiMessagesContainer" class="ai-messages-scroll">
+                    <!-- I messaggi verranno renderizzati qui dinamicamente -->
+                </div>
+
+                <!-- Prompt rapidi suggeriti con 1 clic -->
+                <div class="ai-quick-prompts-bar">
+                    <button type="button" class="ai-quick-btn" data-prompt="Consigli sui carichi e accortezze per l'allenamento di oggi in programma.">🎯 Carichi Oggi</button>
+                    <button type="button" class="ai-quick-btn" data-prompt="Analizza la mia progressione sui carichi e il bilanciamento muscolare nell'ultimo mese.">📊 Analisi Progressi</button>
+                    <button type="button" class="ai-quick-btn" data-prompt="In base agli infortuni o fastidi recenti, quali esercizi devo monitorare o adattare?">🩹 Infortuni & Accortezze</button>
+                </div>
+
+                <!-- Barra di inserimento messaggio -->
+                <div class="ai-input-bar">
+                    <textarea id="aiUserInput" rows="1" placeholder="Chiedi al tuo coach virtuale..." maxlength="2000"></textarea>
+                    <button type="button" id="aiSendMessageBtn" class="primary" title="Invia messaggio">
+                        ➤
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="app-bottom-bar">
+        <button id="analyzeBtn" class="bottom-action-btn primary-ai" title="Apri Chat con Coach Gemini">
+            <span class="btn-icon">🤖</span>
+            <span class="btn-label">Coach AI</span>
+        </button>
+        <button id="openStatsModalBtnFooter" class="bottom-action-btn" title="Visualizza Grafici e Progressi">
+            <span class="btn-icon">📈</span>
+            <span class="btn-label">Grafici</span>
+        </button>
+        <button id="toggleDataMenuBtn" class="bottom-action-btn" title="Gestione Dati, Backup ed Export">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-label">Dati & Backup</span>
+        </button>
+    </footer>
+
+    <!-- Menu a comparsa Dati & Backup (Ordinato e compatto) -->
+    <div id="dataMenuModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>⚙️ Gestione Dati & Archivio</h3>
+                <button type="button" id="closeDataMenuBtn" class="modal-close-btn">✕</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.8rem; padding: 1.2rem;">
+                <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.4rem;">
+                    Salva una copia di sicurezza di tutti i tuoi dati o esportali per fogli di calcolo.
+                </p>
+                <button id="backupBtn" class="primary btn-large-workout" style="background:#2e7d32; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span>💾</span> Scarica Backup JSON
+                </button>
+                <button id="restoreBtn" class="secondary btn-large-workout" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span>📥</span> Ripristina Backup JSON
+                </button>
+                <input type="file" id="restoreFileInput" accept=".json" style="display: none;" />
+                <button id="exportBtn" class="secondary btn-large-workout" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span>📊</span> Esporta in Excel (.xlsx)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Libraries: fallback locale + CDN -->
+    <script src="localforage.min.js"></script>
+    <script>
+        if (typeof localforage === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"><\/script>');
+        }
+    </script>
+    <script src="xlsx.full.min.js"></script>
+    <script>
+        if (typeof XLSX === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+        }
+    </script>
+    
+    <!-- jsPDF e AutoTable -->
+    <script src="jspdf.umd.min.js"></script>
+    <script>
+        if (typeof window.jspdf === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');
+        }
+    </script>
+    <script src="jspdf.plugin.autotable.min.js"></script>
+    <script>
+        if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF.prototype.autoTable === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"><\/script>');
+        }
+    </script>
+
+    <!-- Chart.js Standalone -->
+    <script src="chart.umd.min.js"></script>
+    <script>
+        if (typeof Chart === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"><\/script>');
+        }
+    </script>
+
+    <!-- App Scripts -->
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+            navigator.serviceWorker.register('sw.js').catch(function(err) {
+                console.warn('SW registration skipped/failed:', err);
+            });
+        }
+    </script>
+</body>
+</html>
