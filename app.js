@@ -378,19 +378,23 @@
       muscleBadge = '<span class="exercise-muscle-badge ' + mClass + '">' + escapeHtml(ex.muscle) + '</span>';
     }
 
+    var targetSets = ex.prescribedSets || 3;
+    var targetReps = ex.prescribedReps || 10;
+
     headerDiv.innerHTML = '<div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">' +
       '<span class="exercise-name-text">' + (idx + 1) + '. ' + escapeHtml(ex.name) + '</span>' +
       muscleBadge +
       '<button type="button" class="btn-exercise-chart" title="Visualizza grafico progressi di ' + escapeHtml(ex.name) + '" onclick="window.openExerciseChart(\'' + escapeHtml(ex.name).replace(/'/g, "\\'") + '\')">' +
       '📈 Grafico</button>' +
       '</div>' +
-      '<span class="exercise-prescribed-badge">Target: ' + escapeHtml(ex.prescribedReps || '-') + ' reps</span>';
+      '<span class="exercise-prescribed-badge">Target: ' + targetSets + ' x ' + targetReps + '</span>';
 
     var hintDiv = document.createElement('div');
     hintDiv.className = 'exercise-prev-hint';
     var hintText = '💡 ';
     if (lastStats) {
-      hintText += 'Ultimo carico: <strong>' + lastStats.kg + ' kg x ' + lastStats.reps + ' reps</strong> (' + lastStats.date + ')';
+      var prevSetsText = lastStats.sets ? (lastStats.sets + 's x ') : '';
+      hintText += 'Ultimo carico: <strong>' + lastStats.kg + ' kg (' + prevSetsText + lastStats.reps + ' reps)</strong> (' + lastStats.date + ')';
     } else {
       hintText += 'Nessun carico precedente registrato';
     }
@@ -402,7 +406,99 @@
     var gridDiv = document.createElement('div');
     gridDiv.className = 'exercise-inputs-grid';
 
-    // Input KG con Stepper Rapido (- / +)
+    // 1. Input SERIE FATTE con Stepper Rapido (- / +)
+    var setsCol = document.createElement('div');
+    setsCol.className = 'input-with-label';
+    setsCol.innerHTML = '<label>Serie:</label>';
+
+    var setsWrapper = document.createElement('div');
+    setsWrapper.className = 'stepper-input-wrapper';
+
+    var setsMinusBtn = document.createElement('button');
+    setsMinusBtn.type = 'button';
+    setsMinusBtn.className = 'stepper-btn';
+    setsMinusBtn.textContent = '-';
+
+    var setsInput = document.createElement('input');
+    setsInput.type = 'number';
+    setsInput.min = '1';
+    setsInput.className = 'stepper-num-input';
+    setsInput.placeholder = String(targetSets);
+    setsInput.value = state.sets !== undefined ? state.sets : targetSets;
+    setsInput.oninput = function () {
+      state.sets = setsInput.value;
+    };
+
+    var setsPlusBtn = document.createElement('button');
+    setsPlusBtn.type = 'button';
+    setsPlusBtn.className = 'stepper-btn';
+    setsPlusBtn.textContent = '+';
+
+    setsMinusBtn.onclick = function () {
+      var val = Number(setsInput.value) || 1;
+      val = Math.max(1, val - 1);
+      setsInput.value = val;
+      state.sets = val;
+    };
+    setsPlusBtn.onclick = function () {
+      var val = Number(setsInput.value) || 1;
+      val = val + 1;
+      setsInput.value = val;
+      state.sets = val;
+    };
+
+    setsWrapper.appendChild(setsMinusBtn);
+    setsWrapper.appendChild(setsInput);
+    setsWrapper.appendChild(setsPlusBtn);
+    setsCol.appendChild(setsWrapper);
+
+    // 2. Input RIPETUTE FATTE con Stepper Rapido (- / +)
+    var repsCol = document.createElement('div');
+    repsCol.className = 'input-with-label';
+    repsCol.innerHTML = '<label>Ripetute:</label>';
+
+    var repsWrapper = document.createElement('div');
+    repsWrapper.className = 'stepper-input-wrapper';
+
+    var repsMinusBtn = document.createElement('button');
+    repsMinusBtn.type = 'button';
+    repsMinusBtn.className = 'stepper-btn';
+    repsMinusBtn.textContent = '-';
+
+    var repsInput = document.createElement('input');
+    repsInput.type = 'number';
+    repsInput.min = '0';
+    repsInput.className = 'stepper-num-input';
+    repsInput.placeholder = String(targetReps);
+    repsInput.value = state.reps !== undefined ? state.reps : targetReps;
+    repsInput.oninput = function () {
+      state.reps = repsInput.value;
+    };
+
+    var repsPlusBtn = document.createElement('button');
+    repsPlusBtn.type = 'button';
+    repsPlusBtn.className = 'stepper-btn';
+    repsPlusBtn.textContent = '+';
+
+    repsMinusBtn.onclick = function () {
+      var val = Number(repsInput.value) || 0;
+      val = Math.max(0, val - 1);
+      repsInput.value = val;
+      state.reps = val;
+    };
+    repsPlusBtn.onclick = function () {
+      var val = Number(repsInput.value) || 0;
+      val = val + 1;
+      repsInput.value = val;
+      state.reps = val;
+    };
+
+    repsWrapper.appendChild(repsMinusBtn);
+    repsWrapper.appendChild(repsInput);
+    repsWrapper.appendChild(repsPlusBtn);
+    repsCol.appendChild(repsWrapper);
+
+    // 3. Input KG con Stepper Rapido (- / +)
     var kgCol = document.createElement('div');
     kgCol.className = 'input-with-label';
     kgCol.innerHTML = '<label>Kg (Carico):</label>';
@@ -449,64 +545,18 @@
     kgWrapper.appendChild(kgPlusBtn);
     kgCol.appendChild(kgWrapper);
 
-    // Input RIPETUTE FATTE con Stepper Rapido (- / +)
-    var repsCol = document.createElement('div');
-    repsCol.className = 'input-with-label';
-    repsCol.innerHTML = '<label>Ripetute fatte:</label>';
-
-    var repsWrapper = document.createElement('div');
-    repsWrapper.className = 'stepper-input-wrapper';
-
-    var repsMinusBtn = document.createElement('button');
-    repsMinusBtn.type = 'button';
-    repsMinusBtn.className = 'stepper-btn';
-    repsMinusBtn.textContent = '-';
-
-    var repsInput = document.createElement('input');
-    repsInput.type = 'number';
-    repsInput.min = '0';
-    repsInput.className = 'stepper-num-input';
-    repsInput.placeholder = ex.prescribedReps ? String(ex.prescribedReps) : 'Reps';
-    repsInput.value = state.reps !== undefined ? state.reps : (ex.prescribedReps || '');
-    repsInput.oninput = function () {
-      state.reps = repsInput.value;
-    };
-
-    var repsPlusBtn = document.createElement('button');
-    repsPlusBtn.type = 'button';
-    repsPlusBtn.className = 'stepper-btn';
-    repsPlusBtn.textContent = '+';
-
-    repsMinusBtn.onclick = function () {
-      var val = Number(repsInput.value) || 0;
-      val = Math.max(0, val - 1);
-      repsInput.value = val;
-      state.reps = val;
-    };
-    repsPlusBtn.onclick = function () {
-      var val = Number(repsInput.value) || 0;
-      val = val + 1;
-      repsInput.value = val;
-      state.reps = val;
-    };
-
-    repsWrapper.appendChild(repsMinusBtn);
-    repsWrapper.appendChild(repsInput);
-    repsWrapper.appendChild(repsPlusBtn);
-    repsCol.appendChild(repsWrapper);
-
-    // Tasto OK
+    // 4. Tasto OK
     var okBtn = document.createElement('button');
     okBtn.type = 'button';
     okBtn.className = 'btn-exercise-ok' + (state.done ? ' active-done' : '');
     okBtn.textContent = state.done ? '✓ Fatto' : 'OK';
 
-    // Campo Note Giornaliero
+    // Campo Note Giornaliero (Spazioso su riga intera)
     var notesInput = document.createElement('input');
     notesInput.type = 'text';
     notesInput.className = 'exercise-notes-input';
-    notesInput.placeholder = suggestedNotes ? ('Note/Promemoria: ' + suggestedNotes) : 'Note (es. Aumentare peso la prossima volta, dolore, esecuzione...)';
-    notesInput.value = state.notes !== undefined ? state.notes : suggestedNotes;
+    notesInput.placeholder = suggestedNotes ? ('Note/Promemoria: "' + suggestedNotes + '"') : 'Note seduta (es. Ultima serie ceduto a 8, aumentare carico...)';
+    notesInput.value = state.notes !== undefined ? state.notes : '';
     notesInput.oninput = function () {
       state.notes = notesInput.value;
     };
@@ -515,12 +565,14 @@
       state.done = !state.done;
       if (state.done) {
         okBtn.className = 'btn-exercise-ok active-done';
-        okBtn.textContent = '✓ OK Fatto';
+        okBtn.textContent = '✓ Fatto';
         card.classList.add('status-done');
 
+        var finalSets = Number(setsInput.value) || targetSets || 1;
         var finalKg = Number(kgInput.value) || 0;
-        var finalReps = Number(repsInput.value) || Number(ex.prescribedReps) || 0;
+        var finalReps = Number(repsInput.value) || targetReps || 0;
         var finalNotes = notesInput.value.trim();
+        state.sets = finalSets;
         state.kg = finalKg;
         state.reps = finalReps;
         state.notes = finalNotes;
@@ -532,9 +584,11 @@
           dayName: (activePlan.days.find(function (d) { return d.id === selectedDayId; }) || {}).name || '',
           exercise: ex.name,
           muscle: ex.muscle || '',
+          sets: finalSets,
           kg: finalKg,
           reps: finalReps,
-          prescribedReps: ex.prescribedReps || '',
+          prescribedSets: targetSets,
+          prescribedReps: targetReps,
           notes: finalNotes,
           status: (finalReps > 0 || finalKg > 0) ? 'Completato' : 'Saltato'
         };
@@ -548,8 +602,9 @@
       }
     };
 
-    gridDiv.appendChild(kgCol);
+    gridDiv.appendChild(setsCol);
     gridDiv.appendChild(repsCol);
+    gridDiv.appendChild(kgCol);
     gridDiv.appendChild(okBtn);
 
     card.appendChild(headerDiv);
@@ -576,10 +631,11 @@
       var state = currentWorkoutState[exKey] || { done: false, kg: 0, reps: 0, notes: '' };
 
       var isCompleted = state.done && (Number(state.reps) > 0 || Number(state.kg) > 0);
+      var finalSets = state.sets !== undefined ? (Number(state.sets) || ex.prescribedSets || 1) : (ex.prescribedSets || 3);
       var finalReps = isCompleted ? Number(state.reps) : 0;
       var finalKg = isCompleted ? Number(state.kg) : 0;
       var finalStatus = isCompleted ? 'Completato' : 'Non effettuata / Saltato';
-      var finalNotes = state.notes ? String(state.notes).trim() : (ex.notes || '');
+      var finalNotes = state.notes ? String(state.notes).trim() : '';
 
       if (isCompleted) {
         completedCount++;
@@ -594,9 +650,11 @@
         dayName: currentDay.name,
         exercise: ex.name,
         muscle: ex.muscle || '',
+        sets: finalSets,
         kg: finalKg,
         reps: finalReps,
-        prescribedReps: ex.prescribedReps || '',
+        prescribedSets: ex.prescribedSets || 3,
+        prescribedReps: ex.prescribedReps || 10,
         notes: finalNotes,
         status: finalStatus
       });
@@ -682,9 +740,10 @@
           var muscleTag = ex.muscle ? (' <span style="color:#64b5f6; font-size:0.75rem;">[' + escapeHtml(ex.muscle) + ']</span>') : '';
           var notesText = ex.notes ? ('<div style="font-size:0.75rem; color:#ffa726; margin-top:2px;">💬 Nota: <em>' + escapeHtml(ex.notes) + '</em></div>') : '';
 
+          var setsPart = ex.sets ? (ex.sets + 's × ') : '';
           var statusBadge = isSkipped
             ? '<span style="color:#bbb; font-size:0.8rem;">❌ Non effettuata</span>'
-            : '<span style="color:#4caf50; font-weight:bold;">' + ex.kg + ' kg x ' + ex.reps + ' reps</span>';
+            : '<span style="color:#4caf50; font-weight:bold;">' + ex.kg + ' kg (' + setsPart + ex.reps + ' reps)</span>';
 
           itemDiv.innerHTML = '<div style="flex:1;">' +
             '<strong>' + (eIdx + 1) + '. ' + escapeHtml(ex.exercise) + '</strong>' + muscleTag +
@@ -796,12 +855,12 @@
       dayBox.appendChild(bodyContainer);
       daysBuilderContainer.appendChild(dayBox);
 
-      addExerciseCardToBuilder(i, '', 'Petto', '10', '', false);
-      addExerciseCardToBuilder(i, '', 'Tricipiti', '10', '', false);
+      addExerciseCardToBuilder(i, '', 'Petto', 3, 10, '', false);
+      addExerciseCardToBuilder(i, '', 'Tricipiti', 3, 10, '', false);
     }
   }
 
-  function addExerciseCardToBuilder(dayIndex, defaultName, defaultMuscle, defaultReps, defaultNotes, defaultIsSuperset) {
+  function addExerciseCardToBuilder(dayIndex, defaultName, defaultMuscle, defaultSets, defaultReps, defaultNotes, defaultIsSuperset) {
     var container = document.getElementById('builder_exercises_' + dayIndex);
     if (!container) return;
 
@@ -831,11 +890,22 @@
       muscleSelect.appendChild(opt);
     });
 
+    var setsInput = document.createElement('input');
+    setsInput.type = 'number';
+    setsInput.min = '1';
+    setsInput.className = 'builder-input-sets';
+    setsInput.placeholder = 'Serie (3)';
+    setsInput.value = defaultSets !== undefined ? defaultSets : '3';
+    setsInput.title = 'Numero di Serie da svolgere';
+    setsInput.required = true;
+
     var repsInput = document.createElement('input');
-    repsInput.type = 'text';
+    repsInput.type = 'number';
+    repsInput.min = '1';
     repsInput.className = 'builder-input-reps';
-    repsInput.placeholder = 'Reps (es. 10, 4x8)';
-    repsInput.value = defaultReps || '10';
+    repsInput.placeholder = 'Reps (10)';
+    repsInput.value = defaultReps !== undefined ? defaultReps : '10';
+    repsInput.title = 'Target di Ripetizioni per serie';
     repsInput.required = true;
 
     var delBtn = document.createElement('button');
@@ -849,6 +919,7 @@
 
     topRow.appendChild(nameInput);
     topRow.appendChild(muscleSelect);
+    topRow.appendChild(setsInput);
     topRow.appendChild(repsInput);
     topRow.appendChild(delBtn);
 
@@ -860,7 +931,7 @@
     notesInput.placeholder = 'Note esercizio (es. Aumentare carichi, pausa 90s, recupero lento...)';
     notesInput.value = defaultNotes || '';
 
-    // Checkbox Superserie con l'esercizio successivo
+    // Checkbox Superserie con l'esercizio successivo (su riga autonoma sotto)
     var ssLabel = document.createElement('label');
     ssLabel.className = 'builder-ss-toggle-label';
     var ssCheckbox = document.createElement('input');
@@ -882,7 +953,7 @@
   }
 
   window.addExerciseToBuilderDay = function (dayIndex) {
-    addExerciseCardToBuilder(dayIndex, '', 'Petto', '10', '', false);
+    addExerciseCardToBuilder(dayIndex, '', 'Petto', 3, 10, '', false);
   };
 
   saveCompletePlanBtn.addEventListener('click', async function () {
@@ -908,13 +979,15 @@
       exerciseCards.forEach(function (card) {
         var nameInp = card.querySelector('.builder-input-name');
         var muscleSel = card.querySelector('.builder-muscle-select');
+        var setsInp = card.querySelector('.builder-input-sets');
         var repsInp = card.querySelector('.builder-input-reps');
         var notesInp = card.querySelector('.builder-input-notes');
         var ssCheck = card.querySelector('.builder-input-is-superset');
 
         var exName = nameInp ? nameInp.value.trim() : '';
         var muscle = muscleSel ? muscleSel.value : 'Petto';
-        var prescribedReps = repsInp ? repsInp.value.trim() : '10';
+        var prescribedSets = setsInp ? (parseInt(setsInp.value, 10) || 3) : 3;
+        var prescribedReps = repsInp ? (parseInt(repsInp.value, 10) || 10) : 10;
         var notes = notesInp ? notesInp.value.trim() : '';
         var isSuperset = ssCheck ? Boolean(ssCheck.checked) : false;
 
@@ -922,7 +995,8 @@
           exercises.push({
             name: exName,
             muscle: muscle,
-            prescribedReps: prescribedReps || '10',
+            prescribedSets: prescribedSets,
+            prescribedReps: prescribedReps,
             notes: notes,
             isSuperset: isSuperset
           });
@@ -1091,11 +1165,13 @@
             notesFormatted = (notesFormatted ? (notesFormatted + ' • ') : '') + 'In superserie col successivo (senza recupero)';
           }
 
+          var setsRepsText = (ex.prescribedSets ? (ex.prescribedSets + ' × ') : '') + (ex.prescribedReps || '-');
+
           return [
             String(eIdx + 1),
             exNameFormatted,
             (ex.muscle || '-').toUpperCase(),
-            ex.prescribedReps || '-',
+            setsRepsText,
             notesFormatted,
             '[   .   ] kg'
           ];
@@ -1107,7 +1183,7 @@
 
         doc.autoTable({
           startY: currentY,
-          head: [['#', 'Esercizio', 'Distretto', 'Target Reps', 'Istruzioni & Note', 'Carico Effettivo']],
+          head: [['#', 'Esercizio', 'Distretto', 'Serie × Reps', 'Istruzioni & Note', 'Carico Effettivo']],
           body: tableRows,
           theme: 'striped',
           margin: { left: margin, right: margin },
@@ -1606,21 +1682,29 @@
       var wb = XLSX.utils.book_new();
 
       var logData = logs.map(function (l) {
+        var setsVal = l.sets || l.prescribedSets || 1;
+        var repsVal = l.reps || 0;
+        var kgVal = l.kg || 0;
+        var tonnellaggio = Math.round(setsVal * repsVal * kgVal);
+
         return {
           Data: l.date,
-          Ambiente: l.env,
+          Ambiente: l.env === 'home' ? 'Casa' : 'Palestra',
           Scheda: l.planName,
           Giorno: l.dayName || '',
           Esercizio: l.exercise,
           Gruppo_Muscolare: l.muscle || '',
-          Carico_Kg: l.kg,
-          Ripetute_Fatte: l.reps,
-          Ripetute_Previste: l.prescribedReps || '',
+          Serie_Svolte: setsVal,
+          Ripetute_Svolte: repsVal,
+          Carico_Kg: kgVal,
+          Volume_Tonnellaggio_Kg: tonnellaggio,
+          Target_Serie: l.prescribedSets || 3,
+          Target_Reps: l.prescribedReps || 10,
           Note: l.notes || '',
           Stato: l.status
         };
       });
-      if (logData.length === 0) logData = [{ Data: '', Ambiente: '', Scheda: '', Giorno: '', Esercizio: '', Gruppo_Muscolare: '', Carico_Kg: '', Ripetute_Fatte: '', Note: '', Stato: '' }];
+      if (logData.length === 0) logData = [{ Data: '', Ambiente: '', Scheda: '', Giorno: '', Esercizio: '', Gruppo_Muscolare: '', Serie_Svolte: '', Ripetute_Svolte: '', Carico_Kg: '', Volume_Tonnellaggio_Kg: '', Target_Serie: '', Target_Reps: '', Note: '', Stato: '' }];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logData), 'Registro Pesi');
 
       var extraData = extra.map(function (a) {
@@ -1980,11 +2064,13 @@
         return {
           nome: e.name,
           gruppo: e.muscle || '',
-          target_ripetute: e.prescribedReps || '',
+          target_serie: e.prescribedSets || 3,
+          target_ripetute: e.prescribedReps || 10,
           note_istruzioni: e.notes || '',
           gia_fatto_oggi: Boolean(st.done),
-          kg_impostati_oggi: st.kg || 0,
-          reps_impostate_oggi: st.reps || 0
+          serie_impostate_oggi: st.sets || e.prescribedSets || 3,
+          reps_impostate_oggi: st.reps || e.prescribedReps || 10,
+          kg_impostati_oggi: st.kg || 0
         };
       }) : []
     };
@@ -2009,9 +2095,11 @@
       exerciseHistoryMap[l.exercise].push({
         data: l.date,
         ambiente: l.env,
-        kg: l.kg,
+        serie: l.sets || l.prescribedSets || 3,
         reps: l.reps,
-        target: l.prescribedReps,
+        kg: l.kg,
+        target_serie: l.prescribedSets || 3,
+        target_reps: l.prescribedReps || 10,
         note: l.notes || '',
         stato: l.status
       });
@@ -2359,6 +2447,7 @@
       var kgVal = Number(entry.kg) || 0;
       dataKg.push(kgVal);
       tooltipsData.push({
+        sets: entry.sets || entry.prescribedSets || 3,
         reps: entry.reps || 0,
         notes: entry.notes || '',
         env: entry.env === 'gym' ? 'Palestra' : 'Casa'
@@ -2435,7 +2524,11 @@
               afterLabel: function (context) {
                 var extraInfo = tooltipsData[context.dataIndex];
                 var lines = [];
-                if (extraInfo.reps) lines.push('Ripetizioni: ' + extraInfo.reps);
+                if (extraInfo.sets && extraInfo.reps) {
+                  lines.push('Serie × Reps: ' + extraInfo.sets + ' × ' + extraInfo.reps);
+                } else if (extraInfo.reps) {
+                  lines.push('Ripetizioni: ' + extraInfo.reps);
+                }
                 if (extraInfo.env) lines.push('Ambiente: ' + extraInfo.env);
                 if (extraInfo.notes) lines.push('Note: "' + extraInfo.notes + '"');
                 return lines;

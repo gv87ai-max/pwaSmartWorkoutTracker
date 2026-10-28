@@ -1,0 +1,193 @@
+================================================================================
+                    ALLENATORE PERSONALE PWA - GUIDA & ISTRUZIONI
+================================================================================
+
+Questo file raccoglie le istruzioni operative, i comandi di manutenzione rapida 
+e il funzionamento delle principali sezioni dell'applicazione.
+La presenza di questo file NON interferisce in alcun modo con l'applicazione.
+
+
+--------------------------------------------------------------------------------
+1. COME RESETTARE I DATI (IN CASO DI ERRORI INIZIALI O NUOVI TEST)
+--------------------------------------------------------------------------------
+Se inserisci dati di prova o commetti errori all'inizio e desideri ripulire il 
+database mantenendo intatte le librerie concordate (esercizi, distretti muscolari, 
+sport):
+
+OPZIONE A (Dalla Console del Browser - Istantanea):
+  1. Apri l'app nel browser (Chrome, Edge, ecc.).
+  2. Premi il tasto F12 sulla tastiera (oppure tasto destro del mouse -> "Ispeziona").
+  3. Clicca sulla scheda "Console".
+  4. Incolla o digita questo comando esatto e premi INVIO:
+       db.clearTestData().then(() => location.reload());
+  5. La pagina si ricaricherà automaticamente completamente pulita.
+
+OPZIONE B:
+  Chiedimi semplicemente in chat: "Ripristina il pulsante Reset Test" oppure 
+  "Azzera i dati di test" e lo farò io all'istante.
+
+
+--------------------------------------------------------------------------------
+2. STRUTTURA DELLE SEZIONI
+--------------------------------------------------------------------------------
+
+A. ALLENAMENTO DI OGGI (SCHEDA ATTUALE)
+  • Ambiente: Seleziona in alto tra "Palestra" o "Casa". L'app supporta due schede
+    attive contemporaneamente (1 Palestra, 1 Casa).
+  • Split Giorni: Se la scheda ha più giorni (Giorno 1, Giorno 2, Giorno 3...), 
+    usa i bottoni rapidi in cima per visualizzare gli esercizi di quel giorno.
+  • Nome esercizio e Target Ripetute: Fissi e non modificabili per evitare errori.
+  • Suggerimento Carico Intelligente: L'app recupera in automatico l'ultimo carico (kg), 
+    le serie e le ripetute svolte per quell'esercizio, anche se risale a mesi o anni prima.
+  • Campo Serie, Ripetute e Kg con Stepper Rapidi: Per ogni esercizio trovi 3 controlli con 
+    tasti rapidi [-] e [+] per regolare istantaneamente Serie, Ripetute e Carico senza digitare.
+  • Note/Promemoria Intelligente: In alto compare il promemoria o la nota dell'ultima seduta 
+    (💡 Note/Promemoria: "..."), mentre il campo note odierno è a tutta larghezza e pulito 
+    (con placeholder grigio) pronto per nuove osservazioni senza accumulare vecchie note obsolete.
+  • Tasto OK: Registra subito l'esercizio completato (si illumina in verde).
+  • Tasto "Scheda Completata": Chiude la sessione e salva tutto nello storico. Gli 
+    esercizi non confermati vengono salvati come "Non effettuata / Saltato".
+
+B. COSTRUISCI SCHEDA (CREAZIONE E MODIFICA)
+  • Gestione Giorni a Fisarmonica: Ogni giorno della scheda può essere espanso o chiuso.
+  • Slot "Serie" e "Ripetute" Distinti: Definisci quante serie (es. 3 o 4) e quante ripetute target (es. 10).
+  • Campo Note a Tutta Larghezza (100%): Spazio esteso su riga dedicata per note biomeccaniche o dettagli.
+  • Superserie: Selettore dedicato "⚡ In Superserie con successivo" posizionato subito sotto le note.
+
+C. GRAFICI E STATISTICHE INTERATTIVE (SOLUZIONE IBRIDA)
+  • Tasto Rapido per Esercizio: Accanto al nome di ogni esercizio nell'allenamento di 
+    oggi c'è il pulsantino verde "📈 Grafico". Cliccandolo si apre all'istante l'andamento 
+    dei carichi e delle ripetute di quell'esercizio specifico.
+  • Hub Generale "📈 Grafici & Progressi": Pulsante verde posizionato in cima alla card 
+    "Allenamento di Oggi" che apre la finestra modale completa suddivisa in 3 schede:
+    1. Progressione Forza: Curva dei kg nel tempo, filtri temporali (3 mesi, 6 mesi, 
+       1 anno, tutto lo storico), filtri ambiente (Palestra/Casa), massimale record e 
+       progressione % di miglioramento.
+    2. Frequenza & Consistenza: Grafico a barre su presenze mensili o settimanali, 
+       con divisione tra Schede Pesi e Attività Extra Cardio.
+    3. Gruppi Muscolari: Grafico a ciambella/torta che mostra la percentuale di 
+       lavoro svolto sui vari distretti muscolari (Petto, Dorso, Gambe, Spalle, ecc.).
+  • La finestra modale si chiude con la "✕" in alto a destra o premendo "ESC".
+
+C. ULTIME SCHEDE SVOLTE (STORICO ACCORDION)
+  • Si trova subito sotto l'allenamento di oggi.
+  • È chiuso di default per non occupare spazio. Mostra data, ambiente e nome scheda.
+  • Cliccando sulla singola seduta, si espande il dettaglio completo con carichi, 
+    ripetute, gruppi muscolari e note lasciate quel giorno.
+
+D. INSERISCI NUOVA SCHEDA, GESTIONE SERIE E SUPERSERIE
+  • Sezione a parte collassabile con giorni chiusi di default per ordine.
+  • Permette di impostare: Nome scheda, Data di validità e Numero giorni (da 1 a 6).
+  • Per ciascun esercizio imposti in colonne dedicate:
+    - Nome esercizio (con autocompletamento intelligente).
+    - Gruppo Muscolare (Petto, Dorso, Gambe, Spalle, Tricipiti, Bicipiti, Addome).
+    - 👉 Slot SERIE: numero di serie previste (es. 3 o 4).
+    - 👉 Slot RIPETUTE: target ripetizioni per serie (es. 10 o 8).
+    - 👉 Campo NOTE a tutta larghezza (100%): spazio ampio per istruzioni e accortezze.
+    - 👉 Checkbox "⚡ In Superserie con successivo" posizionata subito sotto.
+  • Visualizzazione Allenamento di Oggi: ogni esercizio dispone di stepper veloci 
+    [-] e [+] per Serie, Ripetute e Kg, con riga Note spaziosa.
+  • Le note della volta precedente restano visibili in alto come promemoria (💡), 
+    mentre il campo di scrittura rimane pulito per accogliere sensazioni fresche.
+  • Esportazione Excel: include le colonne numeriche distinte "Serie_Svolte", 
+    "Ripetute_Svolte", "Carico_Kg" e il calcolo automatico del "Volume_Tonnellaggio_Kg".
+  • Esportazione PDF: riporta la colonna "Serie × Reps" formattata ed elegante.
+
+E. STAMPA / ESPORTA SCHEDA IN PDF
+  • Puoi estrarre il PDF della scheda attiva o di QUALSIASI SCHEDA PASSATA inserendo 
+    una data specifica (es. 2025 o anni precedenti).
+  • Genera un PDF vettoriale (jsPDF) nitido con tabelle divise per giorni, gruppi 
+    muscolari, note e spazio per scrivere i pesi a penna. Non esce mai bianco.
+
+F. ATTIVITÀ EXTRA (SPORT & CARDIO)
+  • Form per registrare Tennis, Corsa, Calcetto, Padel, ecc.
+  • Libreria "Tipo sport" intelligente: si auto-popola man mano che inserisci le voci.
+  • Campo "RPE - Intensità sforzo fisico" da 1 a 10.
+  • Lista collassabile degli ultimi 10 inserimenti con tasti "Modifica" ed "Elimina".
+
+G. INFORTUNI / DOLORI
+  • Se c'è un dolore senza data fine, appare un banner arancione in cima all'app.
+  • Azione rapida "✓ Concludi Oggi" per chiudere il dolore a data odierna.
+  • Autocompletamento con libreria dei distretti muscolari/articolari.
+  • Storico collassabile diviso in "Infortuni in corso" e "Infortuni conclusi" 
+    con possibilità di modificare o eliminare qualsiasi record.
+
+H. INTERAGISCI CON AI (COACH VIRTUALE GEMINI)
+  • Cliccando sul pulsante "🤖 Interagisci con AI" nel footer si apre la schermata 
+    completa di chat con il tuo Coach Virtuale.
+  • Cosa conosce l'IA prima di rispondere:
+    - La data odierna e l'ambiente attivo (Palestra o Casa).
+    - La scheda e il giorno attualmente selezionati con tutti gli esercizi target.
+    - Tutto lo storico completo dei carichi (kg), ripetute e date per ogni esercizio.
+    - Tutte le note che hai scritto seduta dopo seduta ("aumentare peso", "fatica", ecc.).
+    - Tutti gli infortuni in corso e storici con le date.
+    - Tutte le attività extra recenti (corsa, padel, ecc.).
+    - L'intera cronologia dei consigli e dei messaggi scambiati in chat.
+  • Come ottenere l'API Key GRATUITA di Google Gemini (in 60 secondi):
+    1. Vai su: https://aistudio.google.com/ (con il tuo normale account Google).
+    2. Clicca sul pulsante blu "Get API key" (Ottieni chiave API).
+    3. Clicca su "Create API key in new project" (Crea chiave in un nuovo progetto).
+    4. Copia la stringa alfanumerica generata (inizia con "AIzaSy...").
+    5. Nell'app clicca su "🤖 Interagisci con AI", incolla la chiave e premi "Salva".
+    La chiave è GRATUITA per uso personale e rimane salvata SOLO nella memoria del 
+    tuo dispositivo.
+
+I. FOOTER (ESPORTAZIONE, BACKUP E RIPRISTINO)
+  • Esporta Excel (.xlsx): Crea un foglio di calcolo con 4 fogli separati 
+    (Registro Pesi, Attività Extra, Infortuni, Storico Schede).
+  • Backup JSON: Scarica l'intero database in formato .json sul tuo computer 
+    (schede attive e storiche, allenamenti svolti, note, carichi, infortuni, extra e 
+    l'intera cronologia della chat con l'IA).
+  • Ripristina JSON: Ti permette di caricare il file .json scaricato in precedenza 
+    (ad esempio se cambi computer, cambi browser o vuoi tornare a uno stato precedente). 
+    Basta cliccare "Ripristina JSON", selezionare il file salvato sul PC e dare 
+    conferma: l'app caricherà tutti i tuoi dati e ripartirà esattamente da dove eri rimasto!
+
+
+--------------------------------------------------------------------------------
+3. PUBBLICAZIONE SU GITHUB PAGES & INSTALLAZIONE SULLO SMARTPHONE
+--------------------------------------------------------------------------------
+COME PUBBLICARE SU GITHUB:
+  1. Accedi su https://github.com/ e crea un nuovo repository (es. "pwasmartworkouttracker").
+  2. Carica i file dell'app: index.html, style.css, app.js, db.js, sw.js, manifest.json, 
+     i file libreria (.min.js) e la cartella "icons".
+     (Non servono: server.ps1, ui.js, html2pdf e questo file istruzioni).
+  3. Clicca su "Settings" in alto a destra nella barra del repository (non l'ingranaggio About).
+  4. Nel menu a sinistra clicca su "Pages".
+  5. Sotto "Branch", seleziona "main" (o master), cartella "/(root)" e clicca "Save".
+  6. Dopo 60 secondi in cima apparirà il tuo link sicuro HTTPS.
+
+COME INSTALLARE L'APP SUL CELLULARE (PWA A TUTTO SCHERMO):
+  A. Su Android con Google Chrome (Consigliato):
+     1. Se il link dell'email si apre con Samsung Internet, tieni premuto sul link nell'email 
+        e scegli "Copia indirizzo link", poi incollalo dentro l'app Chrome.
+     2. Tocca i tre puntini in alto a destra (⋮).
+     3. Tocca "Installa app" (oppure "Aggiungi a schermata Home").
+     4. Sul display del telefono comparirà l'icona con il logo del manubrio verde.
+     5. Aprendola, funzionerà come un'app INDIPENDENTE a tutto schermo (non occupa le 
+        schede di Chrome, puoi navigare su altri siti liberamente e rientrare quando vuoi).
+
+  B. Su Android con Samsung Internet:
+     1. Apri il link direttamente nell'app Internet di Samsung.
+     2. Tocca il menu in basso a destra (icona con tre lineette ☰).
+     3. Tocca "Aggiungi pagina a" (+) e seleziona "Schermata Home".
+     4. L'app si installerà come icona autonoma.
+
+  C. Su iPhone (Apple Safari):
+     1. Apri il link GitHub Pages usando Safari.
+     2. Tocca in basso al centro il pulsante "Condividi" (quadrato con freccia verso l'alto ↑).
+     3. Scorri il menu verso il basso e tocca "Aggiungi alla schermata Home".
+     4. Tocca "Aggiungi" in alto a destra. L'icona apparirà tra le app del telefono.
+
+COMPORTAMENTO MULTITASKING & OFFLINE:
+  • L'app vive in una finestra separata dal browser: compare nel selettore delle app aperte 
+    come vera applicazione nativa autonoma ("Allenatore PWA").
+  • Grazie al Service Worker salvato sul dispositivo, l'app si apre e funziona al 100% 
+    anche in modalità aereo o nei sotterranei della palestra senza campo telefonico.
+
+CONFIGURAZIONE SUL TELEFONO:
+  - Apri l'app dal telefono -> tocca "🤖 Coach AI" in basso -> inserisci una sola volta 
+    la tua chiave API gratuita di Gemini.
+  - Se avevi già schede o dati sul PC, tocca "⚙️ Dati & Backup" -> "Ripristina Backup JSON" 
+    e seleziona il file di backup inviato dal PC.
+================================================================================
