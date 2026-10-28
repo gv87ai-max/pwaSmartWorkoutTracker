@@ -16,10 +16,58 @@ const db = {
   async setExercises(list) {
     await localforage.setItem('exercises', list || []);
   },
-  async deleteExerciseByName(name) {
-    const list = await this.getAllExercises();
-    const filtered = list.filter(e => e.name.toLowerCase() !== name.toLowerCase());
-    await localforage.setItem('exercises', filtered);
+  async updateExerciseMuscleEverywhere(exerciseName, newMuscle) {
+    if (!exerciseName || !newMuscle) return;
+    const cleanName = exerciseName.trim().toLowerCase();
+
+    // 1. Aggiorna la libreria esercizi
+    const exList = (await this.getAllExercises()) || [];
+    let foundInList = false;
+    exList.forEach(e => {
+      if (e.name && e.name.trim().toLowerCase() === cleanName) {
+        e.muscle = newMuscle;
+        foundInList = true;
+      }
+    });
+    if (!foundInList) {
+      exList.push({ name: exerciseName.trim(), muscle: newMuscle, equipment: '' });
+    }
+    await this.setExercises(exList);
+
+    // 2. Aggiorna lo storico logs (così Excel, grafici e sedute concluse sono corretti)
+    const logs = (await this.getLogs()) || [];
+    let logsModified = false;
+    logs.forEach(l => {
+      if (l.exercise && l.exercise.trim().toLowerCase() === cleanName) {
+        l.muscle = newMuscle;
+        logsModified = true;
+      }
+    });
+    if (logsModified) {
+      await localforage.setItem('logs', logs);
+    }
+
+    // 3. Aggiorna la scheda attiva palestra e casa
+    const envs = ['gym', 'home'];
+    for (const env of envs) {
+      const active = await this.getActivePlan(env);
+      if (active && active.days) {
+        let planModified = false;
+        active.days.forEach(d => {
+          if (d.exercises) {
+            d.exercises.forEach(e => {
+              if (e.name && e.name.trim().toLowerCase() === cleanName) {
+                e.muscle = newMuscle;
+                planModified = true;
+              }
+            });
+          }
+        });
+        if (planModified) {
+          await this.setActivePlan(env, active);
+        }
+      }
+    }
   },
   async addExercise(ex) {
     const list = await this.getAllExercises();

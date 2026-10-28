@@ -25,6 +25,9 @@
   var planInfoSubtext = document.getElementById('planInfoSubtext');
   var goToNewPlanBtn = document.getElementById('goToNewPlanBtn');
   var openPdfExportModalBtn = document.getElementById('openPdfExportModalBtn');
+  var editCurrentPlanBtn = document.getElementById('editCurrentPlanBtn');
+  var cancelEditPlanBtn = document.getElementById('cancelEditPlanBtn');
+  var isEditingActivePlan = false;
   var daySelectorContainer = document.getElementById('daySelectorContainer');
   var workoutDaysAccordionContainer = document.getElementById('workoutDaysAccordionContainer');
   var exerciseListDiv = document.getElementById('exerciseList');
@@ -576,25 +579,6 @@
         state.kg = finalKg;
         state.reps = finalReps;
         state.notes = finalNotes;
-
-        var entry = {
-          date: getTodayDateString(),
-          env: currentEnv,
-          planName: activePlan.name,
-          dayName: (activePlan.days.find(function (d) { return d.id === selectedDayId; }) || {}).name || '',
-          exercise: ex.name,
-          muscle: ex.muscle || '',
-          sets: finalSets,
-          kg: finalKg,
-          reps: finalReps,
-          prescribedSets: targetSets,
-          prescribedReps: targetReps,
-          notes: finalNotes,
-          status: (finalReps > 0 || finalKg > 0) ? 'Completato' : 'Saltato'
-        };
-        await db.addLogEntry(entry);
-        await updateRecentBadge();
-        await renderRecentSessions();
       } else {
         okBtn.className = 'btn-exercise-ok';
         okBtn.textContent = 'OK';
@@ -625,6 +609,28 @@
     var todayStr = getTodayDateString();
     var completedCount = 0;
     var skippedCount = 0;
+    var skippedNames = [];
+
+    // Prima passata: controlliamo quanti esercizi risultano non confermati
+    currentDay.exercises.forEach(function (ex, idx) {
+      var exKey = selectedDayId + '_' + idx;
+      var state = currentWorkoutState[exKey] || { done: false, kg: 0, reps: 0, notes: '' };
+      var isCompleted = state.done && (Number(state.reps) > 0 || Number(state.kg) > 0);
+      if (!isCompleted) {
+        skippedNames.push(ex.name);
+      }
+    });
+
+    // Avviso di sicurezza se ci sono esercizi non confermati con "OK"
+    if (skippedNames.length > 0) {
+      var warningMsg = '⚠️ Attenzione: hai ' + skippedNames.length + ' esercizio/i NON confermato/i con OK:\n\n' +
+        skippedNames.map(function (n, i) { return ' • ' + n; }).join('\n') +
+        '\n\nVuoi davvero salvare l\'allenamento registrando questi esercizi come "Non effettuati / Saltati"?\n(Premi Annulla per tornare indietro e confermarli)';
+      var confirmed = confirm(warningMsg);
+      if (!confirmed) {
+        return; // L'utente torna alla schermata per controllare e cliccare OK
+      }
+    }
 
     currentDay.exercises.forEach(function (ex, idx) {
       var exKey = selectedDayId + '_' + idx;
@@ -660,7 +666,16 @@
       });
     });
 
-    await db.addBulkLogs(logsToSave);
+    // Se per la stessa data, ambiente e giorno esistono già log, ripulisci quelli precedenti per evitare duplicazioni
+    var existingLogs = (await db.getLogs()) || [];
+    var filteredLogs = existingLogs.filter(function (l) {
+      return !(l.date === todayStr && l.env === currentEnv && l.planName === activePlan.name && l.dayName === currentDay.name);
+    });
+    logsToSave.forEach(function (entry) {
+      filteredLogs.push(entry);
+    });
+    await localforage.setItem('logs', filteredLogs);
+
     await updateRecentBadge();
     await renderRecentSessions();
 
@@ -774,10 +789,115 @@
   }
 
   window.openNewPlanSection = function () {
+    isEditingActivePlan = false;
+    newPlanNameInput.value = '';
+    newPlanStartDateInput.value = getTodayDateString();
+    if (cancelEditPlanBtn) cancelEditPlanBtn.style.display = 'none';
+    if (saveCompletePlanBtn) saveCompletePlanBtn.textContent = '💾 Salva e Attiva Nuova Scheda';
+    renderPlanBuilder();
     toggleNewPlanAccordion(true);
     document.getElementById('newPlanSection').scrollIntoView({ behavior: 'smooth' });
   };
   goToNewPlanBtn.addEventListener('click', window.openNewPlanSection);
+
+  window.openEditCurrentPlanSection = async function () {
+    if (!activePlan || !activePlan.days || activePlan.days.length === 0) {
+      alert('Nessuna scheda attiva trovata da modificare per ' + (currentEnv === 'gym' ? 'Palestra' : 'Casa') + '. Creane prima una!');
+      return;
+    }
+
+    isEditingActivePlan = true;
+    newPlanNameInput.value = activePlan.name || '';
+    newPlanStartDateInput.value = activePlan.startDate || getTodayDateString();
+    var daysCount = Math.max(1, Math.min(6, activePlan.days.length));
+    newPlanNumDaysSelect.value = String(daysCount);
+
+    // Carica i dati della scheda attiva nel builder
+    renderPlanBuilderWithData(activePlan);
+
+    if (cancelEditPlanBtn) cancelEditPlanBtn.style.display = 'inline-block';
+    if (saveCompletePlanBtn) saveCompletePlanBtn.textContent = '💾 Salva Modifiche Scheda Attuale';
+
+    toggleNewPlanAccordion(true);
+    document.getElementById('newPlanSection').scrollIntoView({ behavior: 'smooth' });
+  };
+  if (editCurrentPlanBtn) {
+    editCurrentPlanBtn.addEventListener('click', window.openEditCurrentPlanSection);
+  }
+
+  if (cancelEditPlanBtn) {
+    cancelEditPlanBtn.addEventListener('click', function () {
+      isEditingActivePlan = false;
+      toggleNewPlanAccordion(false);
+      cancelEditPlanBtn.style.display = 'none';
+      if (saveCompletePlanBtn) saveCompletePlanBtn.textContent = '💾 Salva Scheda';
+      document.getElementById('todayWorkout').scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  function renderPlanBuilderWithData(planToEdit) {
+    var numDays = planToEdit.days ? planToEdit.days.length : 1;
+    daysBuilderContainer.innerHTML = '';
+    var dayLabels = ['Giorno 1 (A)', 'Giorno 2 (B)', 'Giorno 3 (C)', 'Giorno 4 (D)', 'Giorno 5 (E)', 'Giorno 6 (F)'];
+
+    for (var i = 0; i < numDays; i++) {
+      var dData = planToEdit.days[i];
+      var dayBox = document.createElement('div');
+      dayBox.className = 'builder-day-box';
+      dayBox.id = 'builder_day_' + i;
+
+      var toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'builder-day-header-toggle';
+
+      var titleSpan = document.createElement('span');
+      var label = dData && dData.name ? dData.name : (dayLabels[i] || ('Giorno ' + (i + 1)));
+      titleSpan.innerHTML = '📅 ' + escapeHtml(label);
+
+      var arrowSpan = document.createElement('span');
+      arrowSpan.className = 'session-arrow';
+      arrowSpan.id = 'builder_arrow_' + i;
+      arrowSpan.textContent = '▼ Apri Giorno';
+
+      toggleBtn.appendChild(titleSpan);
+      toggleBtn.appendChild(arrowSpan);
+
+      var bodyContainer = document.createElement('div');
+      bodyContainer.className = 'builder-day-body';
+      bodyContainer.id = 'builder_body_' + i;
+      bodyContainer.style.display = 'none';
+
+      var actionRow = document.createElement('div');
+      actionRow.style.cssText = 'display: flex; justify-content: flex-end; margin-bottom: 0.6rem;';
+      actionRow.innerHTML = '<button type="button" class="btn-small btn-resolve" onclick="window.addExerciseToBuilderDay(' + i + ')">+ Aggiungi Esercizio</button>';
+
+      var listContainer = document.createElement('div');
+      listContainer.id = 'builder_exercises_' + i;
+
+      bodyContainer.appendChild(actionRow);
+      bodyContainer.appendChild(listContainer);
+
+      (function (idx, body, arrow) {
+        toggleBtn.onclick = function () {
+          var isOpen = body.style.display !== 'none';
+          body.style.display = isOpen ? 'none' : 'block';
+          arrow.textContent = isOpen ? '▼ Apri Giorno' : '▲ Chiudi Giorno';
+        };
+      })(i, bodyContainer, arrowSpan);
+
+      dayBox.appendChild(toggleBtn);
+      dayBox.appendChild(bodyContainer);
+      daysBuilderContainer.appendChild(dayBox);
+
+      if (dData && dData.exercises && dData.exercises.length > 0) {
+        dData.exercises.forEach(function (ex) {
+          addExerciseCardToBuilder(i, ex.name, ex.muscle, ex.prescribedSets || 3, ex.prescribedReps || 10, ex.notes || '', Boolean(ex.isSuperset));
+        });
+      } else {
+        addExerciseCardToBuilder(i, '', 'Petto', 3, 10, '', false);
+      }
+    }
+  }
 
   // ════════════════════════════════════════════════════════════════
   // ── SEZIONE 2: INSERISCI NUOVA SCHEDA (BUILDER SEPARATO)      ──
@@ -1022,15 +1142,37 @@
       days: builtDays
     };
 
-    await db.saveNewPlan(currentEnv, newPlanData);
+    if (isEditingActivePlan && activePlan && activePlan.id) {
+      // Modifica della scheda attiva esistente (senza archiviarla doppiamente)
+      newPlanData.id = activePlan.id;
+      newPlanData.env = currentEnv;
+      await db.setActivePlan(currentEnv, newPlanData);
+
+      // Sincronizza i gruppi muscolari negli esercizi e nei log storici
+      for (var b = 0; b < builtDays.length; b++) {
+        var dayExs = builtDays[b].exercises || [];
+        for (var eIdx = 0; eIdx < dayExs.length; eIdx++) {
+          await db.updateExerciseMuscleEverywhere(dayExs[eIdx].name, dayExs[eIdx].muscle);
+        }
+      }
+      alert('✅ Modifiche alla scheda "' + planName + '" salvate con successo!\nTutti i gruppi muscolari e lo storico sedute sono stati aggiornati.');
+    } else {
+      // Nuova scheda: archivia la precedente e attiva la nuova
+      await db.saveNewPlan(currentEnv, newPlanData);
+      alert('✅ Nuova scheda "' + planName + '" salvata e attivata con successo per ' +
+        (currentEnv === 'gym' ? 'Palestra' : 'Casa') + ' con data di validità ' + startDate + '!\nLa scheda precedente è stata archiviata.');
+    }
+
+    isEditingActivePlan = false;
+    if (cancelEditPlanBtn) cancelEditPlanBtn.style.display = 'none';
+    if (saveCompletePlanBtn) saveCompletePlanBtn.textContent = '💾 Salva Scheda';
+
     await updateGlobalExerciseSuggestions();
     await loadActivePlan();
+    await renderRecentSessions();
 
     newPlanNameInput.value = '';
     toggleNewPlanAccordion(false);
-
-    alert('✅ Nuova scheda "' + planName + '" salvata e attivata con successo per ' +
-      (currentEnv === 'gym' ? 'Palestra' : 'Casa') + ' con data di validità ' + startDate + '!\nLa scheda precedente è stata archiviata.');
 
     document.getElementById('todayWorkout').scrollIntoView({ behavior: 'smooth' });
   });

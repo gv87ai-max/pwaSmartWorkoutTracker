@@ -58,6 +58,9 @@
                     <button type="button" id="goToNewPlanBtn" class="secondary" style="font-size:0.85rem; padding: 0.4rem 0.6rem;">
                         ➕ Nuova Scheda
                     </button>
+                    <button type="button" id="editCurrentPlanBtn" class="secondary" style="font-size:0.85rem; padding: 0.4rem 0.6rem; background:#37474f; border-color:#546e7a;">
+                        ✏️ Modifica Scheda
+                    </button>
                 </div>
             </div>
 
@@ -137,9 +140,14 @@
                     <!-- Builder per ciascun giorno -->
                     <div id="daysBuilderContainer"></div>
 
-                    <button type="button" id="saveCompletePlanBtn" class="primary btn-large-workout" style="margin-top: 1.2rem;">
-                        💾 Salva e Attiva Nuova Scheda
-                    </button>
+                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-top: 1.2rem;">
+                        <button type="button" id="saveCompletePlanBtn" class="primary btn-large-workout" style="flex:2;">
+                            💾 Salva Scheda
+                        </button>
+                        <button type="button" id="cancelEditPlanBtn" class="secondary" style="flex:1; display:none;">
+                            Annulla
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
