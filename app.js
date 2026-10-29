@@ -384,13 +384,26 @@
     var targetSets = ex.prescribedSets || 3;
     var targetReps = ex.prescribedReps || 10;
 
-    headerDiv.innerHTML = '<div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">' +
-      '<span class="exercise-name-text">' + (idx + 1) + '. ' + escapeHtml(ex.name) + '</span>' +
+    // Tasto OK / Fatto (posizionato nell'header accanto a Muscolo e Grafico)
+    var okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'btn-exercise-ok' + (state.done ? ' active-done' : '');
+    okBtn.textContent = state.done ? '✓ Fatto' : 'OK';
+
+    var headerLeft = document.createElement('div');
+    headerLeft.className = 'exercise-header-left-group';
+    headerLeft.innerHTML = '<span class="exercise-name-text">' + (idx + 1) + '. ' + escapeHtml(ex.name) + '</span>' +
       muscleBadge +
       '<button type="button" class="btn-exercise-chart" title="Visualizza grafico progressi di ' + escapeHtml(ex.name) + '" onclick="window.openExerciseChart(\'' + escapeHtml(ex.name).replace(/'/g, "\\'") + '\')">' +
-      '📈 Grafico</button>' +
-      '</div>' +
-      '<span class="exercise-prescribed-badge">Target: ' + targetSets + ' x ' + targetReps + '</span>';
+      '📈 Grafico</button>';
+    headerLeft.appendChild(okBtn);
+
+    var targetBadge = document.createElement('span');
+    targetBadge.className = 'exercise-prescribed-badge';
+    targetBadge.textContent = 'Target: ' + targetSets + ' x ' + targetReps;
+
+    headerDiv.appendChild(headerLeft);
+    headerDiv.appendChild(targetBadge);
 
     var hintDiv = document.createElement('div');
     hintDiv.className = 'exercise-prev-hint';
@@ -548,12 +561,6 @@
     kgWrapper.appendChild(kgPlusBtn);
     kgCol.appendChild(kgWrapper);
 
-    // 4. Tasto OK
-    var okBtn = document.createElement('button');
-    okBtn.type = 'button';
-    okBtn.className = 'btn-exercise-ok' + (state.done ? ' active-done' : '');
-    okBtn.textContent = state.done ? '✓ Fatto' : 'OK';
-
     // Campo Note Giornaliero (Spazioso su riga intera)
     var notesInput = document.createElement('input');
     notesInput.type = 'text';
@@ -589,7 +596,6 @@
     gridDiv.appendChild(setsCol);
     gridDiv.appendChild(repsCol);
     gridDiv.appendChild(kgCol);
-    gridDiv.appendChild(okBtn);
 
     card.appendChild(headerDiv);
     card.appendChild(hintDiv);
