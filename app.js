@@ -384,26 +384,13 @@
     var targetSets = ex.prescribedSets || 3;
     var targetReps = ex.prescribedReps || 10;
 
-    // Tasto OK / Fatto (posizionato nell'header accanto a Muscolo e Grafico)
-    var okBtn = document.createElement('button');
-    okBtn.type = 'button';
-    okBtn.className = 'btn-exercise-ok' + (state.done ? ' active-done' : '');
-    okBtn.textContent = state.done ? '✓ Fatto' : 'OK';
-
-    var headerLeft = document.createElement('div');
-    headerLeft.className = 'exercise-header-left-group';
-    headerLeft.innerHTML = '<span class="exercise-name-text">' + (idx + 1) + '. ' + escapeHtml(ex.name) + '</span>' +
+    headerDiv.innerHTML = '<div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.35rem;">' +
+      '<span class="exercise-name-text">' + (idx + 1) + '. ' + escapeHtml(ex.name) + '</span>' +
       muscleBadge +
       '<button type="button" class="btn-exercise-chart" title="Visualizza grafico progressi di ' + escapeHtml(ex.name) + '" onclick="window.openExerciseChart(\'' + escapeHtml(ex.name).replace(/'/g, "\\'") + '\')">' +
-      '📈 Grafico</button>';
-    headerLeft.appendChild(okBtn);
-
-    var targetBadge = document.createElement('span');
-    targetBadge.className = 'exercise-prescribed-badge';
-    targetBadge.textContent = 'Target: ' + targetSets + ' x ' + targetReps;
-
-    headerDiv.appendChild(headerLeft);
-    headerDiv.appendChild(targetBadge);
+      '📈 Grafico</button>' +
+      '</div>' +
+      '<span class="exercise-prescribed-badge">Target: ' + targetSets + ' x ' + targetReps + '</span>';
 
     var hintDiv = document.createElement('div');
     hintDiv.className = 'exercise-prev-hint';
@@ -571,11 +558,17 @@
       state.notes = notesInput.value;
     };
 
+    // Tasto "Fatto" grande sotto le note a tutta larghezza
+    var okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'btn-exercise-fatto-full' + (state.done ? ' active-done' : '');
+    okBtn.innerHTML = state.done ? '✓ Esercizio Completato' : 'Fatto';
+
     okBtn.onclick = async function () {
       state.done = !state.done;
       if (state.done) {
-        okBtn.className = 'btn-exercise-ok active-done';
-        okBtn.textContent = '✓ Fatto';
+        okBtn.className = 'btn-exercise-fatto-full active-done';
+        okBtn.innerHTML = '✓ Esercizio Completato';
         card.classList.add('status-done');
 
         var finalSets = Number(setsInput.value) || targetSets || 1;
@@ -587,8 +580,8 @@
         state.reps = finalReps;
         state.notes = finalNotes;
       } else {
-        okBtn.className = 'btn-exercise-ok';
-        okBtn.textContent = 'OK';
+        okBtn.className = 'btn-exercise-fatto-full';
+        okBtn.innerHTML = 'Fatto';
         card.classList.remove('status-done');
       }
     };
@@ -601,6 +594,7 @@
     card.appendChild(hintDiv);
     card.appendChild(gridDiv);
     card.appendChild(notesInput);
+    card.appendChild(okBtn);
 
     return card;
   }
