@@ -14,14 +14,13 @@
   var backupBtn = document.getElementById('backupBtn');
   var restoreBtn = document.getElementById('restoreBtn');
   var restoreFileInput = document.getElementById('restoreFileInput');
-  var analyzeBtn = document.getElementById('analyzeBtn');
+  var openWeightModalBtn = document.getElementById('openWeightModalBtn');
   var openStatsModalBtnFooter = document.getElementById('openStatsModalBtnFooter');
   var toggleDataMenuBtn = document.getElementById('toggleDataMenuBtn');
   var dataMenuModal = document.getElementById('dataMenuModal');
   var closeDataMenuBtn = document.getElementById('closeDataMenuBtn');
 
   // ── Elements Sezione "Allenamento di Oggi" ──
-  var openStatsModalBtn = document.getElementById('openStatsModalBtn');
   var planInfoSubtext = document.getElementById('planInfoSubtext');
   var goToNewPlanBtn = document.getElementById('goToNewPlanBtn');
   var openPdfExportModalBtn = document.getElementById('openPdfExportModalBtn');
@@ -1873,6 +1872,18 @@
       if (injData.length === 0) injData = [{ Inizio: '', Tipo: '', Fine: '', Stato: '', Note: '' }];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(injData), 'Infortuni');
 
+      // ── Nuovo Foglio: Peso Corporeo ──
+      var weightLogs = await db.getWeightLogs();
+      var weightData = weightLogs.map(function (w) {
+        return {
+          Data: w.date,
+          Peso_Kg: Number(w.kg) || 0,
+          Note: w.notes || ''
+        };
+      });
+      if (weightData.length === 0) weightData = [{ Data: '', Peso_Kg: '', Note: '' }];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(weightData), 'Peso Corporeo');
+
       var archData = archives.map(function (a) {
         return {
           Nome: a.name,
@@ -1900,6 +1911,7 @@
         sport_types_library: await db.getSportTypesLibrary(),
         injuries: await db.getInjuries(),
         injury_types_library: await db.getInjuryTypesLibrary(),
+        weights: await db.getWeightLogs(),
         gym_activePlan: await db.getActivePlan('gym'),
         home_activePlan: await db.getActivePlan('home'),
         gym_archives: await db.getArchives('gym'),
@@ -1995,393 +2007,152 @@
   }
 
   // ════════════════════════════════════════════════════════════════
-  // ── SEZIONE: INTERAGISCI CON AI (GEMINI COACH)                ──
+  // ── SEZIONE: MODULO PESO CORPOREO                             ──
   // ════════════════════════════════════════════════════════════════
-  var aiModal = document.getElementById('aiModal');
-  var closeAiModalBtn = document.getElementById('closeAiModalBtn');
-  var aiApiKeySettingsBtn = document.getElementById('aiApiKeySettingsBtn');
-  var aiClearChatBtn = document.getElementById('aiClearChatBtn');
-  var aiKeySetupView = document.getElementById('aiKeySetupView');
-  var aiChatView = document.getElementById('aiChatView');
-  var aiApiKeyInput = document.getElementById('aiApiKeyInput');
-  var aiModelSelect = document.getElementById('aiModelSelect');
-  var saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
-  var cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
-  var aiMessagesContainer = document.getElementById('aiMessagesContainer');
-  var aiUserInput = document.getElementById('aiUserInput');
-  var aiSendMessageBtn = document.getElementById('aiSendMessageBtn');
-  var aiQuickBtns = document.querySelectorAll('.ai-quick-btn');
+  var weightModal = document.getElementById('weightModal');
+  var closeWeightModalBtn = document.getElementById('closeWeightModalBtn');
+  var weightForm = document.getElementById('weightForm');
+  var weightDateInput = document.getElementById('weightDateInput');
+  var weightKgInput = document.getElementById('weightKgInput');
+  var weightNotesInput = document.getElementById('weightNotesInput');
+  var weightCountBadge = document.getElementById('weightCountBadge');
+  var lastWeightBadge = document.getElementById('lastWeightBadge');
+  var weightHistoryContainer = document.getElementById('weightHistoryContainer');
 
-  var currentApiKey = '';
-  var isAiGenerating = false;
-
-  async function openAiModal() {
-    if (!aiModal) return;
-    currentApiKey = await db.getApiKey();
-    aiModal.style.display = 'flex';
+  async function openWeightModal() {
+    if (!weightModal) return;
+    weightModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    if (!currentApiKey) {
-      showApiKeySetup(false);
-    } else {
-      showChatView();
-      await renderChatMessages();
+    // Preimposta la data di oggi
+    if (weightDateInput) {
+      weightDateInput.value = getTodayDateString();
+    }
+
+    // Preimposta l'ultimo peso rilevato come placeholder o valore
+    var last = await db.getLastWeight();
+    if (last && weightKgInput) {
+      weightKgInput.placeholder = 'Ultimo: ' + last.kg + ' kg';
+    }
+
+    await renderWeightHistory();
+    if (weightKgInput) {
+      setTimeout(function () { weightKgInput.focus(); }, 150);
     }
   }
 
-  function closeAiModal() {
-    if (!aiModal) return;
-    aiModal.style.display = 'none';
+  function closeWeightModal() {
+    if (!weightModal) return;
+    weightModal.style.display = 'none';
     document.body.style.overflow = '';
   }
 
-  async function showApiKeySetup(canCancel) {
-    aiKeySetupView.style.display = 'block';
-    aiChatView.style.display = 'none';
-    aiApiKeyInput.value = currentApiKey || '';
-    if (aiModelSelect) {
-      aiModelSelect.value = await db.getAiModel();
-    }
-    cancelApiKeyBtn.style.display = canCancel ? 'block' : 'none';
+  if (openWeightModalBtn) {
+    openWeightModalBtn.addEventListener('click', openWeightModal);
   }
 
-  function showChatView() {
-    aiKeySetupView.style.display = 'none';
-    aiChatView.style.display = 'flex';
-    setTimeout(function () {
-      aiUserInput.focus();
-    }, 100);
+  if (closeWeightModalBtn) {
+    closeWeightModalBtn.addEventListener('click', closeWeightModal);
   }
 
-  if (analyzeBtn) {
-    analyzeBtn.addEventListener('click', openAiModal);
-  }
-
-  if (closeAiModalBtn) {
-    closeAiModalBtn.addEventListener('click', closeAiModal);
-  }
-
-  if (aiModal) {
-    aiModal.addEventListener('click', function (e) {
-      if (e.target === aiModal) closeAiModal();
+  if (weightModal) {
+    weightModal.addEventListener('click', function (e) {
+      if (e.target === weightModal) closeWeightModal();
     });
   }
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && aiModal && aiModal.style.display === 'flex') {
-      closeAiModal();
+    if (e.key === 'Escape' && weightModal && weightModal.style.display === 'flex') {
+      closeWeightModal();
     }
   });
 
-  if (aiApiKeySettingsBtn) {
-    aiApiKeySettingsBtn.addEventListener('click', function () {
-      showApiKeySetup(Boolean(currentApiKey));
-    });
-  }
+  if (weightForm) {
+    weightForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var dateVal = weightDateInput.value || getTodayDateString();
+      var kgVal = parseFloat(weightKgInput.value);
+      var notesVal = weightNotesInput.value.trim();
 
-  if (cancelApiKeyBtn) {
-    cancelApiKeyBtn.addEventListener('click', function () {
-      if (currentApiKey) showChatView();
-    });
-  }
-
-  if (saveApiKeyBtn) {
-    saveApiKeyBtn.addEventListener('click', async function () {
-      var key = aiApiKeyInput.value.trim();
-      var selectedModel = aiModelSelect ? aiModelSelect.value : 'gemini-2.0-flash';
-      if (!key) {
-        alert('Per favore, inserisci un\'API Key valida.');
+      if (isNaN(kgVal) || kgVal <= 0) {
+        alert('Inserisci un peso valido in Kg (es. 75.4).');
+        weightKgInput.focus();
         return;
       }
-      await db.setApiKey(key);
-      await db.setAiModel(selectedModel);
-      currentApiKey = key;
-      alert('✅ Impostazioni salvate con successo sul tuo dispositivo!\nModello: ' + selectedModel);
-      showChatView();
-      await renderChatMessages();
+
+      await db.addWeightLog({
+        date: dateVal,
+        kg: kgVal,
+        notes: notesVal
+      });
+
+      weightKgInput.value = '';
+      weightNotesInput.value = '';
+      await renderWeightHistory();
+
+      alert('✅ Peso registrato con successo: ' + kgVal + ' Kg (' + dateVal + ')!\nIncluso nel registro storico ed esportabile in Excel.');
     });
   }
 
-  if (aiClearChatBtn) {
-    aiClearChatBtn.addEventListener('click', async function () {
-      var confirmClear = confirm('Vuoi cancellare la cronologia della conversazione con l\'IA e iniziare una nuova chat?\n(I tuoi allenamenti, carichi e schede non verranno toccati).');
-      if (confirmClear) {
-        await db.clearAiChatHistory();
-        await renderChatMessages();
+  async function renderWeightHistory() {
+    if (!weightHistoryContainer) return;
+    var list = await db.getWeightLogs();
+
+    if (weightCountBadge) {
+      weightCountBadge.textContent = list.length;
+    }
+
+    if (lastWeightBadge) {
+      if (list.length > 0) {
+        lastWeightBadge.textContent = 'Ultimo: ' + list[0].kg + ' kg (' + list[0].date + ')';
+      } else {
+        lastWeightBadge.textContent = '';
       }
-    });
-  }
+    }
 
-  // Quick prompt buttons
-  aiQuickBtns.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var prompt = btn.getAttribute('data-prompt');
-      if (prompt && !isAiGenerating) {
-        aiUserInput.value = prompt;
-        sendMessageToAi();
-      }
-    });
-  });
-
-  // Invio con Invio (Shift+Invio per a capo)
-  if (aiUserInput) {
-    aiUserInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessageToAi();
-      }
-    });
-  }
-
-  if (aiSendMessageBtn) {
-    aiSendMessageBtn.addEventListener('click', sendMessageToAi);
-  }
-
-  async function renderChatMessages() {
-    if (!aiMessagesContainer) return;
-    var history = await db.getAiChatHistory();
-    aiMessagesContainer.innerHTML = '';
-
-    if (history.length === 0) {
-      aiMessagesContainer.innerHTML =
-        '<div style="color:#888; text-align:center; font-size:0.9rem; padding:2rem 1rem;">' +
-        '<div style="font-size:2rem; margin-bottom:0.5rem;">👋</div>' +
-        '<strong style="color:#ddd;">Ciao! Sono il tuo Coach Virtuale.</strong><br>' +
-        'Conosco tutti i tuoi allenamenti, i carichi registrati, le tue note e i tuoi infortuni.<br>' +
-        'Chiedimi consigli sulla scheda di oggi, analisi sui progressi o usa i pulsanti rapidi in basso!' +
-        '</div>';
+    weightHistoryContainer.innerHTML = '';
+    if (list.length === 0) {
+      weightHistoryContainer.innerHTML = '<div style="color:#888; text-align:center; font-size:0.85rem; padding:1.2rem 0.5rem;">' +
+        'Nessun peso registrato finora.<br>Inserisci la tua prima pesata qui sopra!</div>';
       return;
     }
 
-    history.forEach(function (msg) {
-      appendMessageBubble(msg.role, msg.text, msg.time);
-    });
+    list.forEach(function (w) {
+      var item = document.createElement('div');
+      item.className = 'weight-history-item';
 
-    scrollChatToBottom();
-  }
+      var left = document.createElement('div');
+      left.innerHTML = '<div class="weight-history-date">📅 ' + escapeHtml(w.date) + '</div>' +
+        (w.notes ? '<div class="weight-history-notes">💬 ' + escapeHtml(w.notes) + '</div>' : '');
 
-  function appendMessageBubble(role, text, time) {
-    var row = document.createElement('div');
-    row.className = 'ai-message-row ' + role;
+      var right = document.createElement('div');
+      right.style.display = 'flex';
+      right.style.alignItems = 'center';
+      right.style.gap = '0.6rem';
 
-    var bubble = document.createElement('div');
-    bubble.className = 'ai-message-bubble';
-    
-    // Semplice parsing per grassetto e ritorni a capo
-    var formattedText = escapeHtml(text)
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
+      var kgSpan = document.createElement('span');
+      kgSpan.className = 'weight-history-kg';
+      kgSpan.textContent = w.kg + ' kg';
 
-    bubble.innerHTML = formattedText;
-
-    if (time) {
-      var timeDiv = document.createElement('div');
-      timeDiv.className = 'ai-message-time';
-      timeDiv.textContent = time;
-      bubble.appendChild(timeDiv);
-    }
-
-    row.appendChild(bubble);
-    aiMessagesContainer.appendChild(row);
-  }
-
-  function scrollChatToBottom() {
-    aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
-  }
-
-  // Costruzione del contesto completo di allenamento (Prompt di Sistema)
-  async function buildComprehensiveContext() {
-    var todayStr = getTodayDateString();
-    var currentDay = activePlan && activePlan.days ? activePlan.days.find(function (d) { return d.id === selectedDayId; }) : null;
-
-    // 1. Allenamento di Oggi e Scheda Attiva
-    var todayWorkoutContext = {
-      data_odierna: todayStr,
-      ambiente_attivo: currentEnv === 'gym' ? 'Palestra' : 'Casa',
-      scheda_nome: activePlan ? activePlan.name : 'Nessuna scheda attiva',
-      giorno_selezionato: currentDay ? currentDay.name : 'Nessun giorno',
-      esercizi_in_programma: currentDay && currentDay.exercises ? currentDay.exercises.map(function (e, idx) {
-        var exKey = selectedDayId + '_' + idx;
-        var st = currentWorkoutState[exKey] || {};
-        return {
-          nome: e.name,
-          gruppo: e.muscle || '',
-          target_serie: e.prescribedSets || 3,
-          target_ripetute: e.prescribedReps || 10,
-          note_istruzioni: e.notes || '',
-          gia_fatto_oggi: Boolean(st.done),
-          serie_impostate_oggi: st.sets || e.prescribedSets || 3,
-          reps_impostate_oggi: st.reps || e.prescribedReps || 10,
-          kg_impostati_oggi: st.kg || 0
-        };
-      }) : []
-    };
-
-    // 2. Infortuni (Attivi e Storici)
-    var allInjuries = await db.getInjuries();
-    var activeInjuries = allInjuries.filter(function (i) { return !i.end; });
-    var pastInjuries = allInjuries.filter(function (i) { return Boolean(i.end); });
-
-    // 3. Attività Extra recenti
-    var extra = await db.getExtraActivities();
-    var recentExtra = extra.slice(0, 15);
-
-    // 4. Storico completo dei log di allenamento (Pesi, Ripetizioni, Note per esercizio)
-    var logs = await db.getLogs();
-    
-    // Creiamo un riassunto cronologico ordinato degli esercizi svolti
-    var exerciseHistoryMap = {};
-    logs.forEach(function (l) {
-      if (!l.exercise || (Number(l.kg) === 0 && Number(l.reps) === 0)) return;
-      if (!exerciseHistoryMap[l.exercise]) exerciseHistoryMap[l.exercise] = [];
-      exerciseHistoryMap[l.exercise].push({
-        data: l.date,
-        ambiente: l.env,
-        serie: l.sets || l.prescribedSets || 3,
-        reps: l.reps,
-        kg: l.kg,
-        target_serie: l.prescribedSets || 3,
-        target_reps: l.prescribedReps || 10,
-        note: l.notes || '',
-        stato: l.status
-      });
-    });
-
-    var systemInstructions = 
-      "Sei Antigravity Coach, un personal trainer e preparatore atletico esperto, professionale, motivante e pragmatico.\n" +
-      "Hai accesso all'intero profilo e storico di allenamento reale dell'atleta che risiede nella sua app PWA.\n\n" +
-      "CONTESTO E DATI REALI DELL'ATLETA:\n" +
-      "- DATA DI OGGI: " + todayWorkoutContext.data_odierna + "\n" +
-      "- AMBIENTE CORRENTE: " + todayWorkoutContext.ambiente_attivo + "\n" +
-      "- SCHEDA IN USO: " + todayWorkoutContext.scheda_nome + " | Giorno: " + todayWorkoutContext.giorno_selezionato + "\n" +
-      "- ESERCIZI IN PROGRAMMA OGGI: " + JSON.stringify(todayWorkoutContext.esercizi_in_programma) + "\n\n" +
-      "- INFORTUNI / DOLORI ATTIVI IN CORSO: " + (activeInjuries.length > 0 ? JSON.stringify(activeInjuries) : "Nessuno") + "\n" +
-      "- STORICO INFORTUNI RISOLTI NEL PASSATO: " + (pastInjuries.length > 0 ? JSON.stringify(pastInjuries) : "Nessuno") + "\n\n" +
-      "- ATTIVITÀ EXTRA CARDIO RECENTI (Corsa, Padel, Tennis, ecc.): " + JSON.stringify(recentExtra) + "\n\n" +
-      "- STORICO CARICHI, RIPETIZIONI E NOTE NEL TEMPO PER ESERCIZIO: " + JSON.stringify(exerciseHistoryMap) + "\n\n" +
-      "LINEE GUIDA PER LE TUE RISPOSTE:\n" +
-      "1. Fai sempre riferimento ai dati numerici reali dell'utente (cita date, kg sollevati in passato, note scritte dall'atleta).\n" +
-      "2. Quando rispondi su 'Allenamento di Oggi' o consigli sui carichi, guarda esattamente gli esercizi previsti oggi e quanto ha sollevato l'ultima volta.\n" +
-      "3. Se ci sono infortuni o fastidi attivi (o recenti sullo stesso distretto), dai priorità assoluta alla sicurezza dell'articolazione, suggerendo modifiche di ROM o carichi prudenti.\n" +
-      "4. Sii sintetico, chiaro ed energico. Usa elenchi puntati ed evidenzia i carichi consigliati in grassetto per una lettura rapida in palestra.";
-
-    return systemInstructions;
-  }
-
-  async function sendMessageToAi() {
-    var text = aiUserInput.value.trim();
-    if (!text || isAiGenerating) return;
-
-    if (!currentApiKey) {
-      showApiKeySetup(false);
-      return;
-    }
-
-    var history = await db.getAiChatHistory();
-    var nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // Salva messaggio utente
-    var userMsg = { role: 'user', text: text, time: nowTime };
-    history.push(userMsg);
-    await db.saveAiChatHistory(history);
-
-    aiUserInput.value = '';
-    appendMessageBubble('user', text, nowTime);
-    scrollChatToBottom();
-
-    // Mostra indicatore di digitazione
-    isAiGenerating = true;
-    aiSendMessageBtn.disabled = true;
-    var typingDiv = document.createElement('div');
-    typingDiv.className = 'ai-message-row assistant';
-    typingDiv.id = 'aiTypingIndicator';
-    typingDiv.innerHTML = '<div class="ai-typing-indicator"><div class="ai-typing-dot"></div><div class="ai-typing-dot"></div><div class="ai-typing-dot"></div></div>';
-    aiMessagesContainer.appendChild(typingDiv);
-    scrollChatToBottom();
-
-    try {
-      var systemPrompt = await buildComprehensiveContext();
-
-      // Prepara i messaggi per Gemini API (contents format)
-      var contents = [];
-
-      // Aggiungi cronologia precedente (massimo ultimi 30 scambi per sicurezza di banda)
-      var recentHistory = history.slice(-30);
-      recentHistory.forEach(function (m) {
-        contents.push({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.text }]
-        });
-      });
-
-      var requestBody = {
-        system_instruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000
+      var delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'btn-small btn-delete';
+      delBtn.textContent = '✕';
+      delBtn.title = 'Elimina misurazione';
+      delBtn.onclick = async function () {
+        if (confirm('Eliminare la pesata del ' + w.date + ' (' + w.kg + ' kg)?')) {
+          await db.deleteWeightLog(w.id);
+          await renderWeightHistory();
         }
       };
 
-      var chosenModel = await db.getAiModel();
-      var endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + chosenModel + ':generateContent?key=' + currentApiKey;
+      right.appendChild(kgSpan);
+      right.appendChild(delBtn);
 
-      var response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
-
-      // Se il modello scelto (es. 2.0) restituisce 404 per via dell'account, fallback trasparente su 1.5-flash
-      if (!response.ok && response.status === 404 && chosenModel !== 'gemini-1.5-flash') {
-        console.warn('Fallback automatico a gemini-1.5-flash...');
-        endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + currentApiKey;
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-      }
-
-      if (!response.ok) {
-        var errBody = await response.json().catch(function () { return {}; });
-        var msg = (errBody.error && errBody.error.message) ? errBody.error.message : ('Errore HTTP ' + response.status);
-        throw new Error(msg);
-      }
-
-      var resData = await response.json();
-      var aiReply = 'Nessuna risposta generata.';
-      if (resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts) {
-        aiReply = resData.candidates[0].content.parts.map(function (p) { return p.text; }).join('\n');
-      }
-
-      // Rimuovi typing indicator
-      var typingEl = document.getElementById('aiTypingIndicator');
-      if (typingEl) typingEl.remove();
-
-      var aiTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      var assistantMsg = { role: 'assistant', text: aiReply, time: aiTime };
-      history.push(assistantMsg);
-      await db.saveAiChatHistory(history);
-
-      appendMessageBubble('assistant', aiReply, aiTime);
-      scrollChatToBottom();
-
-    } catch (err) {
-      console.error('Gemini API Error:', err);
-      var typingElErr = document.getElementById('aiTypingIndicator');
-      if (typingElErr) typingElErr.remove();
-
-      var errMsg = '⚠️ Errore di connessione a Gemini: ' + err.message +
-        '\n\nVerifica che la tua API Key sia corretta cliccando su ⚙️ in alto a destra.';
-      appendMessageBubble('assistant', errMsg, '');
-      scrollChatToBottom();
-    } finally {
-      isAiGenerating = false;
-      aiSendMessageBtn.disabled = false;
-    }
+      item.appendChild(left);
+      item.appendChild(right);
+      weightHistoryContainer.appendChild(item);
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -2434,12 +2205,6 @@
   window.openExerciseChart = function (exerciseName) {
     openStatsModal(exerciseName);
   };
-
-  if (openStatsModalBtn) {
-    openStatsModalBtn.addEventListener('click', function () {
-      openStatsModal();
-    });
-  }
 
   if (closeStatsModalBtn) {
     closeStatsModalBtn.addEventListener('click', closeStatsModal);

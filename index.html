@@ -49,9 +49,6 @@
                     <div id="planInfoSubtext" class="plan-subtext">Caricamento scheda in corso...</div>
                 </div>
                 <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-                    <button type="button" id="openStatsModalBtn" class="primary" style="font-size:0.85rem; padding: 0.4rem 0.7rem; background:#00c853;">
-                        📈 Grafici & Progressi
-                    </button>
                     <button type="button" id="openPdfExportModalBtn" class="secondary" style="font-size:0.85rem; padding: 0.4rem 0.6rem;">
                         📄 Scarica PDF
                     </button>
@@ -384,78 +381,71 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════ -->
-    <!-- FINESTRA MODALE: INTERAGISCI CON AI (COACH VIRTUALE)      -->
+    <!-- FINESTRA MODALE: MODULO PESO CORPOREO                      -->
     <!-- ══════════════════════════════════════════════════════════ -->
-    <div id="aiModal" class="modal-backdrop" style="display: none;">
-        <div class="modal-dialog ai-modal-dialog">
-            <!-- Header Modale AI -->
+    <div id="weightModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <!-- Header Modale Peso -->
             <div class="modal-header">
-                <h3>🤖 Coach Virtuale AI (Gemini)</h3>
-                <div style="display: flex; gap: 0.4rem; align-items: center;">
-                    <button type="button" id="aiApiKeySettingsBtn" class="ai-header-btn" title="Configura / Modifica API Key">⚙️ Chiave</button>
-                    <button type="button" id="aiClearChatBtn" class="ai-header-btn" title="Azzera conversazione">🗑️ Nuova Chat</button>
-                    <button type="button" id="closeAiModalBtn" class="modal-close-btn" title="Chiudi">✕</button>
-                </div>
+                <h3>⚖️ Registro Peso Corporeo</h3>
+                <button type="button" id="closeWeightModalBtn" class="modal-close-btn" title="Chiudi">✕</button>
             </div>
 
-            <!-- SCHERMATA A: Configurazione / Inserimento API Key (Se non ancora salvata) -->
-            <div id="aiKeySetupView" class="modal-body" style="display: none; padding: 2rem 1.2rem; text-align: center;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.8rem;">🔑</div>
-                <h3 style="margin-bottom: 0.5rem; color: #fff;">Configura la tua API Key di Gemini</h3>
-                <p style="font-size: 0.9rem; color: #aaa; max-width: 480px; margin: 0 auto 1.5rem auto;">
-                    Per consentire all'assistente di analizzare i tuoi allenamenti, inserisci la tua API Key gratuita di Google Gemini. La chiave viene memorizzata esclusivamente nella memoria locale del tuo dispositivo.
+            <div class="modal-body" style="padding: 1.2rem;">
+                <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 1.2rem;">
+                    Monitora il tuo peso nel tempo. Ogni misurazione viene memorizzata nello storico e inclusa automaticamente nell'export di Excel.
                 </p>
 
-                <div style="max-width: 480px; margin: 0 auto; text-align: left;">
-                    <label for="aiApiKeyInput" style="font-size: 0.85rem; color: #ccc;">Incolla qui l'API Key:</label>
-                    <input type="password" id="aiApiKeyInput" placeholder="AIzaSy..." style="font-family: monospace; font-size: 1rem; padding: 0.7rem; margin-top: 0.3rem;" />
-                    
-                    <label for="aiModelSelect" style="font-size: 0.85rem; color: #ccc; margin-top: 0.8rem; display: block;">Modello Gemini:</label>
-                    <select id="aiModelSelect" style="margin-top: 0.3rem; padding: 0.6rem; font-size: 0.95rem;">
-                        <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Consigliato - Più veloce e intelligente)</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Standard stabile)</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Analisi profonda avanzata)</option>
-                    </select>
+                <!-- Form Registrazione Peso -->
+                <form id="weightForm" style="display: flex; flex-direction: column; gap: 0.8rem; background: #1a1e26; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                    <div>
+                        <label for="weightDateInput" style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Data:</label>
+                        <input type="date" id="weightDateInput" required style="margin-top: 0.3rem;" />
+                    </div>
 
-                    <button type="button" id="saveApiKeyBtn" class="primary btn-large-workout" style="margin-top: 1.2rem; background: #9c27b0;">
-                        💾 Salva Impostazioni e Inizia
+                    <div>
+                        <label for="weightKgInput" style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Peso in Kg:</label>
+                        <input type="number" id="weightKgInput" step="0.1" min="30" max="300" placeholder="Es. 75.4" required style="margin-top: 0.3rem; font-size: 1.1rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;" />
+                    </div>
+
+                    <div>
+                        <label for="weightNotesInput" style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Note (facoltativo):</label>
+                        <input type="text" id="weightNotesInput" placeholder="Es. A digiuno appena sveglio, post allenamento..." style="margin-top: 0.3rem;" />
+                    </div>
+
+                    <button type="submit" id="saveWeightBtn" class="primary btn-large-workout" style="margin-top: 0.5rem; background: #00bcd4;">
+                        💾 Salva Peso
                     </button>
-                    <button type="button" id="cancelApiKeyBtn" class="secondary" style="margin-top: 0.5rem; width: 100%; display: none;">
-                        Annulla
-                    </button>
-                </div>
-            </div>
+                </form>
 
-            <!-- SCHERMATA B: Interfaccia Chat AI Reale -->
-            <div id="aiChatView" class="ai-chat-container" style="display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden;">
-                <!-- Messaggi della chat -->
-                <div id="aiMessagesContainer" class="ai-messages-scroll">
-                    <!-- I messaggi verranno renderizzati qui dinamicamente -->
-                </div>
-
-                <!-- Prompt rapidi suggeriti con 1 clic -->
-                <div class="ai-quick-prompts-bar">
-                    <button type="button" class="ai-quick-btn" data-prompt="Consigli sui carichi e accortezze per l'allenamento di oggi in programma.">🎯 Carichi Oggi</button>
-                    <button type="button" class="ai-quick-btn" data-prompt="Analizza la mia progressione sui carichi e il bilanciamento muscolare nell'ultimo mese.">📊 Analisi Progressi</button>
-                    <button type="button" class="ai-quick-btn" data-prompt="In base agli infortuni o fastidi recenti, quali esercizi devo monitorare o adattare?">🩹 Infortuni & Accortezze</button>
-                </div>
-
-                <!-- Barra di inserimento messaggio -->
-                <div class="ai-input-bar">
-                    <textarea id="aiUserInput" rows="1" placeholder="Chiedi al tuo coach virtuale..." maxlength="2000"></textarea>
-                    <button type="button" id="aiSendMessageBtn" class="primary" title="Invia messaggio">
-                        ➤
-                    </button>
+                <!-- Storico Ultimi Rilevamenti Peso -->
+                <div style="margin-top: 1.4rem;">
+                    <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span>📜 Storico Rilevamenti (<span id="weightCountBadge">0</span>)</span>
+                        <span id="lastWeightBadge" style="font-size: 0.8rem; color: #00bcd4; font-weight: normal;"></span>
+                    </h4>
+                    <div id="weightHistoryContainer" style="max-height: 220px; overflow-y: auto; background: #14171d; border-radius: 6px; border: 1px solid var(--border-subtle); padding: 0.4rem;">
+                        <!-- Renderizzato via JS -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <footer class="app-bottom-bar">
-        <button id="analyzeBtn" class="bottom-action-btn primary-ai" title="Apri Chat con Coach Gemini">
-            <span class="btn-icon">🤖</span>
-            <span class="btn-label">Coach AI</span>
+        <button id="openWeightModalBtn" class="bottom-action-btn primary-weight" title="Registra e consulta il Peso Corporeo">
+            <span class="btn-icon">⚖️</span>
+            <span class="btn-label">Peso</span>
         </button>
+        <button id="openStatsModalBtnFooter" class="bottom-action-btn" title="Visualizza Grafici e Progressi">
+            <span class="btn-icon">📈</span>
+            <span class="btn-label">Grafici</span>
+        </button>
+        <button id="toggleDataMenuBtn" class="bottom-action-btn" title="Gestione Dati, Backup ed Export">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-label">Dati & Backup</span>
+        </button>
+    </footer>
         <button id="openStatsModalBtnFooter" class="bottom-action-btn" title="Visualizza Grafici e Progressi">
             <span class="btn-icon">📈</span>
             <span class="btn-label">Grafici</span>

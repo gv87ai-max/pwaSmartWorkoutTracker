@@ -375,9 +375,42 @@ const db = {
     return list;
   },
 
+  // ── Modulo Peso Corporeo (Tracciamento Storico) ──
+  async getWeightLogs() {
+    const weights = (await localforage.getItem('weights')) || [];
+    // Ordina per data decrescente (più recente in alto)
+    weights.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return weights;
+  },
+  async addWeightLog(entry) {
+    const weights = (await localforage.getItem('weights')) || [];
+    if (!entry.id) {
+      entry.id = 'weight_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    }
+    // Se per la stessa data esiste già un peso, aggiornalo, altrimenti aggiungilo
+    const existingIndex = weights.findIndex(w => w.date === entry.date);
+    if (existingIndex !== -1) {
+      weights[existingIndex] = { ...weights[existingIndex], ...entry };
+    } else {
+      weights.push(entry);
+    }
+    await localforage.setItem('weights', weights);
+    return entry;
+  },
+  async deleteWeightLog(id) {
+    const weights = (await localforage.getItem('weights')) || [];
+    const filtered = weights.filter(w => w.id !== id);
+    await localforage.setItem('weights', filtered);
+  },
+  async getLastWeight() {
+    const list = await this.getWeightLogs();
+    return list.length > 0 ? list[0] : null;
+  },
+
   // ── Azzeramento dati di test / Reset manuale ──
   async clearTestData() {
     await localforage.removeItem('logs');
+    await localforage.removeItem('weights');
     await localforage.removeItem('extra');
     await localforage.removeItem('injuries');
     await localforage.removeItem('gym_activePlan');
@@ -420,6 +453,7 @@ const db = {
     const keysToRestore = [
       'exercises',
       'logs',
+      'weights',
       'extra',
       'sport_types_library',
       'injuries',
@@ -427,8 +461,7 @@ const db = {
       'gym_activePlan',
       'home_activePlan',
       'gym_archives',
-      'home_archives',
-      'ai_chat_history'
+      'home_archives'
     ];
 
     for (const key of keysToRestore) {
