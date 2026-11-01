@@ -929,10 +929,39 @@
   });
 
   newPlanNumDaysSelect.addEventListener('change', function () {
-    renderPlanBuilder();
+    // Raccoglie i dati attualmente digitati o presenti nei vari giorni prima di rigenerare
+    var currentDaysData = [];
+    for (var i = 0; i < 6; i++) {
+      var container = document.getElementById('builder_exercises_' + i);
+      if (!container) continue;
+      var cards = container.querySelectorAll('.builder-exercise-card');
+      var exs = [];
+      cards.forEach(function (card) {
+        var nameInp = card.querySelector('.builder-input-name');
+        var muscleSel = card.querySelector('.builder-muscle-select');
+        var setsInp = card.querySelector('.builder-input-sets');
+        var repsInp = card.querySelector('.builder-input-reps');
+        var notesInp = card.querySelector('.builder-input-notes');
+        var ssCheck = card.querySelector('.builder-input-is-superset');
+
+        exs.push({
+          name: nameInp ? nameInp.value : '',
+          muscle: muscleSel ? muscleSel.value : 'Petto',
+          prescribedSets: setsInp ? (parseInt(setsInp.value, 10) || 3) : 3,
+          prescribedReps: repsInp ? (parseInt(repsInp.value, 10) || 10) : 10,
+          notes: notesInp ? notesInp.value : '',
+          isSuperset: ssCheck ? Boolean(ssCheck.checked) : false
+        });
+      });
+      if (exs.length > 0) {
+        currentDaysData[i] = exs;
+      }
+    }
+
+    renderPlanBuilder(currentDaysData);
   });
 
-  function renderPlanBuilder() {
+  function renderPlanBuilder(existingDaysData) {
     var numDays = parseInt(newPlanNumDaysSelect.value, 10) || 1;
     daysBuilderContainer.innerHTML = '';
 
@@ -954,8 +983,9 @@
       var arrowSpan = document.createElement('span');
       arrowSpan.className = 'session-arrow';
       arrowSpan.id = 'builder_arrow_' + i;
-      // Chiuso di default per ordine
-      arrowSpan.textContent = '▼ Apri Giorno';
+      // Il Giorno 1 lo teniamo aperto se c'è solo un giorno o all'inizio, altrimenti chiuso
+      var isOpenInitially = (i === 0 && numDays === 1);
+      arrowSpan.textContent = isOpenInitially ? '▲ Chiudi Giorno' : '▼ Apri Giorno';
 
       toggleBtn.appendChild(titleSpan);
       toggleBtn.appendChild(arrowSpan);
@@ -964,7 +994,7 @@
       var bodyContainer = document.createElement('div');
       bodyContainer.className = 'builder-day-body';
       bodyContainer.id = 'builder_body_' + i;
-      bodyContainer.style.display = 'none'; // Chiuso di default!
+      bodyContainer.style.display = isOpenInitially ? 'block' : 'none';
 
       var actionRow = document.createElement('div');
       actionRow.style.cssText = 'display: flex; justify-content: flex-end; margin-bottom: 0.6rem;';
@@ -989,8 +1019,17 @@
       dayBox.appendChild(bodyContainer);
       daysBuilderContainer.appendChild(dayBox);
 
-      addExerciseCardToBuilder(i, '', 'Petto', 3, 10, '', false);
-      addExerciseCardToBuilder(i, '', 'Tricipiti', 3, 10, '', false);
+      // Se c'erano già dati per questo giorno (es. Giorno 1 esistente durante il cambio a 2 giorni), PRESERVALI!
+      var daySavedExs = (existingDaysData && existingDaysData[i]) ? existingDaysData[i] : null;
+      if (daySavedExs && daySavedExs.length > 0) {
+        daySavedExs.forEach(function (ex) {
+          addExerciseCardToBuilder(i, ex.name, ex.muscle, ex.prescribedSets, ex.prescribedReps, ex.notes, ex.isSuperset);
+        });
+      } else {
+        // Giorno nuovo appena aggiunto
+        addExerciseCardToBuilder(i, '', 'Petto', 3, 10, '', false);
+        addExerciseCardToBuilder(i, '', 'Tricipiti', 3, 10, '', false);
+      }
     }
   }
 
