@@ -1052,39 +1052,65 @@ footer button {
   border-color: #e53935;
 }
 
-/* Tabs di navigazione modale */
+/* Tabs di navigazione modale (Design moderno stile Segmented Control) */
 .modal-tabs {
   display: flex;
-  background: #1e1e1e;
-  border-bottom: 1px solid #333;
+  background: #14171d;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0.35rem;
+  gap: 0.3rem;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.modal-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-tab-btn {
   flex: 1;
-  min-width: 130px;
-  padding: 0.75rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.5rem;
   background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  color: #888;
-  font-size: 0.88rem;
-  font-weight: bold;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
   cursor: pointer;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
+.modal-tab-btn .tab-btn-icon {
+  font-size: 1rem;
+}
+
 .modal-tab-btn.active {
-  color: #00e676;
-  border-bottom-color: #00e676;
-  background: rgba(0, 230, 118, 0.05);
+  color: #0b0f12;
+  background: #00e676;
+  border-color: #00e676;
+  box-shadow: 0 2px 8px rgba(0, 230, 118, 0.3);
 }
 
 .modal-tab-btn:hover:not(.active) {
-  color: #ddd;
-  background: #262626;
+  color: #fff;
+  background: var(--surface-2);
+}
+
+@media (max-width: 420px) {
+  .modal-tab-btn {
+    padding: 0.5rem 0.3rem;
+    font-size: 0.78rem;
+    gap: 0.25rem;
+  }
+  .modal-tab-btn .tab-btn-icon {
+    font-size: 0.9rem;
+  }
 }
 
 /* Corpo modale con scroll */
