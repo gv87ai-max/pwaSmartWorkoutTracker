@@ -285,53 +285,64 @@
     var idx = 0;
     while (idx < currentDay.exercises.length) {
       var ex = currentDay.exercises[idx];
-      var nextEx = (idx + 1 < currentDay.exercises.length) ? currentDay.exercises[idx + 1] : null;
 
-      // Superserie
-      if (ex.isSuperset && nextEx) {
+      // Se questo esercizio ha la spunta superserie, raccogliamo TUTTI gli esercizi
+      // consecutivi che fanno parte della catena (Circuiti / Giant Set da 3, 4, 5, 6, 7+ esercizi)
+      if (ex.isSuperset && (idx + 1 < currentDay.exercises.length)) {
+        var groupExercises = [ex];
+        var cursor = idx + 1;
+        while (cursor < currentDay.exercises.length) {
+          var prev = currentDay.exercises[cursor - 1];
+          var current = currentDay.exercises[cursor];
+          groupExercises.push(current);
+          if (!current.isSuperset) {
+            // L'ultimo dell'anello/circuito non ha isSuperset: la sequenza termina qui
+            break;
+          }
+          cursor++;
+        }
+
+        var isGiantSet = groupExercises.length > 2;
         var groupWrapper = document.createElement('div');
         groupWrapper.className = 'superserie-group-wrapper';
 
         var badgeHeader = document.createElement('div');
         badgeHeader.className = 'superserie-badge-header';
-        badgeHeader.innerHTML = '⚡ SUPERSERIE (Esercizi ' + (idx + 1) + ' + ' + (idx + 2) + ' - Senza pausa)';
+        var badgeTitle = isGiantSet
+          ? ('⚡ CIRCUITO / GIANT SET (' + groupExercises.length + ' Esercizi a rotazione continua)')
+          : ('⚡ SUPERSERIE (Esercizi ' + (idx + 1) + ' + ' + (idx + 2) + ' - Senza pausa)');
+        badgeHeader.innerHTML = badgeTitle;
         groupWrapper.appendChild(badgeHeader);
 
-        var exKey1 = currentDay.id + '_' + idx;
-        var lastStats1 = await db.getLastExerciseStats(ex.name);
-        var notes1 = (lastStats1 && lastStats1.notes) ? lastStats1.notes : (ex.notes || '');
-        if (!currentWorkoutState[exKey1]) {
-          currentWorkoutState[exKey1] = {
-            done: false,
-            kg: lastStats1 ? lastStats1.kg : '',
-            reps: ex.prescribedReps || (lastStats1 ? lastStats1.reps : ''),
-            notes: notes1
-          };
-        }
-        var card1 = createWorkoutExerciseCard(ex, exKey1, lastStats1, notes1, idx);
-        groupWrapper.appendChild(card1);
+        for (var g = 0; g < groupExercises.length; g++) {
+          var gEx = groupExercises[g];
+          var realIndex = idx + g;
+          var exKey = currentDay.id + '_' + realIndex;
+          var lastStats = await db.getLastExerciseStats(gEx.name);
+          var notes = (lastStats && lastStats.notes) ? lastStats.notes : (gEx.notes || '');
 
-        var connector = document.createElement('div');
-        connector.className = 'superserie-connector-line';
-        connector.innerHTML = '<span>⚡ Passa subito a:</span>';
-        groupWrapper.appendChild(connector);
+          if (!currentWorkoutState[exKey]) {
+            currentWorkoutState[exKey] = {
+              done: false,
+              kg: lastStats ? lastStats.kg : (gEx.targetKg || ''),
+              reps: gEx.prescribedReps || (lastStats ? lastStats.reps : ''),
+              notes: notes
+            };
+          }
 
-        var exKey2 = currentDay.id + '_' + (idx + 1);
-        var lastStats2 = await db.getLastExerciseStats(nextEx.name);
-        var notes2 = (lastStats2 && lastStats2.notes) ? lastStats2.notes : (nextEx.notes || '');
-        if (!currentWorkoutState[exKey2]) {
-          currentWorkoutState[exKey2] = {
-            done: false,
-            kg: lastStats2 ? lastStats2.kg : '',
-            reps: nextEx.prescribedReps || (lastStats2 ? lastStats2.reps : ''),
-            notes: notes2
-          };
+          var card = createWorkoutExerciseCard(gEx, exKey, lastStats, notes, realIndex);
+          groupWrapper.appendChild(card);
+
+          if (g < groupExercises.length - 1) {
+            var connector = document.createElement('div');
+            connector.className = 'superserie-connector-line';
+            connector.innerHTML = '<span>⚡ Passa subito a:</span>';
+            groupWrapper.appendChild(connector);
+          }
         }
-        var card2 = createWorkoutExerciseCard(nextEx, exKey2, lastStats2, notes2, idx + 1);
-        groupWrapper.appendChild(card2);
 
         container.appendChild(groupWrapper);
-        idx += 2;
+        idx += groupExercises.length;
       } else {
         var exKey = currentDay.id + '_' + idx;
         var lastStats = await db.getLastExerciseStats(ex.name);
@@ -661,6 +672,7 @@
         prescribedSets: ex.prescribedSets || 3,
         prescribedReps: ex.prescribedReps || 10,
         notes: finalNotes,
+        isSuperset: Boolean(ex.isSuperset),
         status: finalStatus
       });
     });
@@ -1835,6 +1847,7 @@
           Giorno: l.dayName || '',
           Esercizio: l.exercise,
           Gruppo_Muscolare: l.muscle || '',
+          Modalita: l.isSuperset ? 'Circuito / Superserie' : 'Standard',
           Serie_Svolte: setsVal,
           Ripetute_Svolte: repsVal,
           Carico_Kg: kgVal,
@@ -1845,7 +1858,7 @@
           Stato: l.status
         };
       });
-      if (logData.length === 0) logData = [{ Data: '', Ambiente: '', Scheda: '', Giorno: '', Esercizio: '', Gruppo_Muscolare: '', Serie_Svolte: '', Ripetute_Svolte: '', Carico_Kg: '', Volume_Tonnellaggio_Kg: '', Target_Serie: '', Target_Reps: '', Note: '', Stato: '' }];
+      if (logData.length === 0) logData = [{ Data: '', Ambiente: '', Scheda: '', Giorno: '', Esercizio: '', Gruppo_Muscolare: '', Modalita: '', Serie_Svolte: '', Ripetute_Svolte: '', Carico_Kg: '', Volume_Tonnellaggio_Kg: '', Target_Serie: '', Target_Reps: '', Note: '', Stato: '' }];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logData), 'Registro Pesi');
 
       var extraData = extra.map(function (a) {
