@@ -659,6 +659,9 @@
         skippedCount++;
       }
 
+      // È in superserie/circuito se ha la spunta LUI STESSO oppure se la aveva quello SUBITO PRIMA
+      var isPartOfSuperset = Boolean(ex.isSuperset) || (idx > 0 && Boolean(currentDay.exercises[idx - 1].isSuperset));
+
       logsToSave.push({
         date: todayStr,
         env: currentEnv,
@@ -672,7 +675,7 @@
         prescribedSets: ex.prescribedSets || 3,
         prescribedReps: ex.prescribedReps || 10,
         notes: finalNotes,
-        isSuperset: Boolean(ex.isSuperset),
+        isSuperset: isPartOfSuperset,
         status: finalStatus
       });
     });
@@ -1834,11 +1837,33 @@
 
       var wb = XLSX.utils.book_new();
 
+      var gymPlan = await db.getActivePlan('gym');
+      var homePlan = await db.getActivePlan('home');
+
+      // Helper rapido per verificare se un esercizio era previsto in superserie nella scheda
+      function checkIsExerciseInPlanSuperset(env, exName) {
+        var p = env === 'home' ? homePlan : gymPlan;
+        if (!p || !p.days) return false;
+        for (var d = 0; d < p.days.length; d++) {
+          var exs = p.days[d].exercises || [];
+          for (var i = 0; i < exs.length; i++) {
+            if (exs[i].name && exs[i].name.toLowerCase() === (exName || '').toLowerCase()) {
+              if (exs[i].isSuperset || (i > 0 && exs[i - 1].isSuperset)) {
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      }
+
       var logData = logs.map(function (l) {
         var setsVal = l.sets || l.prescribedSets || 1;
         var repsVal = l.reps || 0;
         var kgVal = l.kg || 0;
         var tonnellaggio = Math.round(setsVal * repsVal * kgVal);
+
+        var isSs = (l.isSuperset !== undefined) ? Boolean(l.isSuperset) : checkIsExerciseInPlanSuperset(l.env, l.exercise);
 
         return {
           Data: l.date,
@@ -1847,7 +1872,7 @@
           Giorno: l.dayName || '',
           Esercizio: l.exercise,
           Gruppo_Muscolare: l.muscle || '',
-          Modalita: l.isSuperset ? 'Circuito / Superserie' : 'Standard',
+          Modalita: isSs ? 'Circuito / Superserie' : 'Standard',
           Serie_Svolte: setsVal,
           Ripetute_Svolte: repsVal,
           Carico_Kg: kgVal,

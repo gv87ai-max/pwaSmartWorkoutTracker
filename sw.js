@@ -1,5 +1,5 @@
 // sw.js - Service Worker con Network-First (Aggiornamenti automatici fluidi + Funzionamento 100% Offline)
-const CACHE_NAME = 'workout-pwa-cache-v13';
+const CACHE_NAME = 'workout-pwa-cache-v15';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
