@@ -2548,14 +2548,19 @@
     var logs = await db.getLogs();
     var extra = await db.getExtraActivities();
 
-    var weightSessions = new Set();
+    var gymSessions = new Set();
+    var homeSessions = new Set();
     logs.forEach(function (l) {
       if (l.date && (Number(l.kg) > 0 || Number(l.reps) > 0)) {
-        weightSessions.add(l.date + '_' + (l.env || 'gym'));
+        if (l.env === 'home') {
+          homeSessions.add(l.date);
+        } else {
+          gymSessions.add(l.date);
+        }
       }
     });
 
-    var countsMap = {}; // key -> { weights: 0, extra: 0 }
+    var countsMap = {}; // key -> { gym: 0, home: 0, extra: 0 }
 
     if (viewMode === 'monthly') {
       // Raggruppa per mese (ultimi 12 mesi)
@@ -2563,13 +2568,17 @@
       for (var m = 11; m >= 0; m--) {
         var d = new Date(now.getFullYear(), now.getMonth() - m, 1);
         var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-        countsMap[key] = { weights: 0, extra: 0 };
+        countsMap[key] = { gym: 0, home: 0, extra: 0 };
       }
 
-      weightSessions.forEach(function (item) {
-        var dateStr = item.split('_')[0];
+      gymSessions.forEach(function (dateStr) {
         var ym = dateStr.substr(0, 7);
-        if (countsMap[ym]) countsMap[ym].weights++;
+        if (countsMap[ym]) countsMap[ym].gym++;
+      });
+
+      homeSessions.forEach(function (dateStr) {
+        var ym = dateStr.substr(0, 7);
+        if (countsMap[ym]) countsMap[ym].home++;
       });
 
       extra.forEach(function (ex) {
@@ -2584,15 +2593,23 @@
       for (var w = 11; w >= 0; w--) {
         var startWeek = new Date(now.getTime() - (w * 7 * oneDay));
         var label = 'Sett. -' + w;
-        countsMap[label] = { weights: 0, extra: 0, start: startWeek.getTime() - (3.5 * oneDay), end: startWeek.getTime() + (3.5 * oneDay) };
+        countsMap[label] = { gym: 0, home: 0, extra: 0, start: startWeek.getTime() - (3.5 * oneDay), end: startWeek.getTime() + (3.5 * oneDay) };
       }
 
-      weightSessions.forEach(function (item) {
-        var dateStr = item.split('_')[0];
+      gymSessions.forEach(function (dateStr) {
         var t = new Date(dateStr).getTime();
         Object.keys(countsMap).forEach(function (k) {
           if (t >= countsMap[k].start && t < countsMap[k].end) {
-            countsMap[k].weights++;
+            countsMap[k].gym++;
+          }
+        });
+      });
+
+      homeSessions.forEach(function (dateStr) {
+        var t = new Date(dateStr).getTime();
+        Object.keys(countsMap).forEach(function (k) {
+          if (t >= countsMap[k].start && t < countsMap[k].end) {
+            countsMap[k].home++;
           }
         });
       });
@@ -2611,19 +2628,35 @@
     var labels = Object.keys(countsMap);
     var datasets = [];
 
-    var totalWeights = 0;
+    var totalGym = 0;
+    var totalHome = 0;
     var totalExtra = 0;
 
     labels.forEach(function (k) {
-      totalWeights += countsMap[k].weights;
+      totalGym += countsMap[k].gym;
+      totalHome += countsMap[k].home;
       totalExtra += countsMap[k].extra;
     });
 
-    if (filterAct === 'all' || filterAct === 'weights') {
+    // Colorazione coerente con l'app:
+    // Palestra: Verde Smeraldo / Foresta (#00e676 o #4caf50)
+    // Casa: Ciano / Azzurro (#00bcd4 / #2196f3)
+    // Extra: Arancione (#ff9800)
+
+    if (filterAct === 'all' || filterAct === 'gym' || filterAct === 'weights') {
       datasets.push({
-        label: 'Schede Pesi (Palestra/Casa)',
-        data: labels.map(function (k) { return countsMap[k].weights; }),
-        backgroundColor: '#2196f3',
+        label: 'Palestra (Pesi)',
+        data: labels.map(function (k) { return countsMap[k].gym; }),
+        backgroundColor: '#4caf50',
+        borderRadius: 4
+      });
+    }
+
+    if (filterAct === 'all' || filterAct === 'home' || filterAct === 'weights') {
+      datasets.push({
+        label: 'Casa (Allenamento)',
+        data: labels.map(function (k) { return countsMap[k].home; }),
+        backgroundColor: '#00bcd4',
         borderRadius: 4
       });
     }
@@ -2639,19 +2672,24 @@
 
     frequencyStatsSummary.innerHTML =
       '<div class="stat-metric-card">' +
-      '<div class="stat-metric-label">🏋️ Sedute Pesi Totali</div>' +
-      '<div class="stat-metric-value">' + totalWeights + '</div>' +
-      '<div class="stat-metric-sub">Sessioni completate</div>' +
+      '<div class="stat-metric-label">🏋️ Sedute Palestra</div>' +
+      '<div class="stat-metric-value" style="color:#4caf50;">' + totalGym + '</div>' +
+      '<div class="stat-metric-sub">Sessioni pesi sala</div>' +
       '</div>' +
       '<div class="stat-metric-card">' +
-      '<div class="stat-metric-label">🏃 Attività Extra Totali</div>' +
+      '<div class="stat-metric-label">🏠 Sedute Casa</div>' +
+      '<div class="stat-metric-value" style="color:#00bcd4;">' + totalHome + '</div>' +
+      '<div class="stat-metric-sub">Circuito / Addome</div>' +
+      '</div>' +
+      '<div class="stat-metric-card">' +
+      '<div class="stat-metric-label">🏃 Attività Extra</div>' +
       '<div class="stat-metric-value" style="color:#ff9800;">' + totalExtra + '</div>' +
       '<div class="stat-metric-sub">Corsa, padel, ecc.</div>' +
       '</div>' +
       '<div class="stat-metric-card">' +
-      '<div class="stat-metric-label">🔥 Volume Combinato</div>' +
-      '<div class="stat-metric-value" style="color:#00e676;">' + (totalWeights + totalExtra) + '</div>' +
-      '<div class="stat-metric-sub">Totale allenamenti</div>' +
+      '<div class="stat-metric-label">🔥 Totale Allenamenti</div>' +
+      '<div class="stat-metric-value" style="color:#fff;">' + (totalGym + totalHome + totalExtra) + '</div>' +
+      '<div class="stat-metric-sub">Volume combinato</div>' +
       '</div>';
 
     if (frequencyChartInstance) frequencyChartInstance.destroy();
